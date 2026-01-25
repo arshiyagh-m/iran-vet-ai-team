@@ -1,62 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import axios from '../api/axios';
+const express = require('express');
+const router = express.Router();
+const { protect, admin } = require('../middleware/authMiddleware');
+const User = require('../models/User');
+const License = require('../models/License');
+const Ticket = require('../models/Ticket');
+const FileMeta = require('../models/FileMeta'); // مدل متا دیتا اضافه شد
 
-const AdminPanel = () => {
-    const [chatLogs, setChatLogs] = useState([]);
+// ۱. آمار کلی (بدون تغییر)
+router.get('/stats', protect, admin, async (req, res) => {
+    const userCount = await User.countDocuments();
+    const activeLicenses = await License.countDocuments({ isActive: true });
+    const ticketCount = await Ticket.countDocuments({ status: 'Open' });
+    res.json({ userCount, activeLicenses, ticketCount });
+});
 
-    // دریافت تاریخچه چت تمام کاربران برای ادمین
-    useEffect(() => {
-        const fetchLogs = async () => {
-            const token = localStorage.getItem('token');
-            const res = await axios.get('/admin/all-chats', { // فرض بر وجود این روت در ادمین
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            setChatLogs(res.data);
-        };
-        fetchLogs();
-    }, []);
+// ۲. دریافت وضعیت همگام‌سازی فایل‌های اکسل (جدید)
+router.get('/sync-status', protect, admin, async (req, res) => {
+    try {
+        const files = await FileMeta.find().sort({ lastUpdated: -1 });
+        res.json(files);
+    } catch (error) {
+        res.status(500).json({ message: 'خطا در دریافت وضعیت فایل‌ها' });
+    }
+});
 
-    return (
-        <div className="p-8 bg-gray-100 min-h-screen">
-            <h2 className="text-3xl font-bold mb-6 text-brand-navy">مانیتورینگ هوشمند چت‌ها</h2>
-            
-            <div className="grid gap-4">
-                {chatLogs.map((log) => (
-                    <div 
-                        key={log._id} 
-                        className={`p-4 rounded-xl border-r-4 shadow-sm transition hover:shadow-md ${
-                            log.isFallbackResponse 
-                                ? 'bg-red-50 border-red-500' // استایل قرمز برای پاسخ‌های بدون دیتابیس
-                                : 'bg-white border-brand-green'
-                        }`}
-                    >
-                        <div className="flex justify-between items-start mb-2">
-                            <span className="font-bold text-gray-700">
-                                {log.isFallbackResponse && <span className="text-red-600 ml-2 animate-pulse">⚠️ خارج از دیتابیس</span>}
-                                کاربر: {log.user?.fullName || 'ناشناس'}
-                            </span>
-                            <span className="text-xs text-gray-400">{new Date(log.timestamp).toLocaleString('fa-IR')}</span>
-                        </div>
+// ۳. مدیریت لایسنس و تیکت (بدون تغییر)
+router.post('/create-license', protect, admin, async (req, res) => {
+    const { userId, tokens, tier, days } = req.body;
+    const code = 'VET-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + parseInt(days));
 
-                        <p className="text-sm font-bold text-brand-navy mb-1">سوال: {log.question}</p>
-                        
-                        <div className="bg-gray-100 p-2 rounded text-sm text-gray-600 mt-2 max-h-20 overflow-y-auto">
-                           پاسخ بات: {log.answer.substring(0, 150)}...
-                        </div>
+    const license = await License.create({
+        code, user: userId, tokens, expiryDate, tier
+    });
+    res.json(license);
+});
 
-                        {log.isFallbackResponse && (
-                            <div className="mt-3 flex justify-end">
-                                <button className="bg-red-600 text-white text-xs px-3 py-1 rounded hover:bg-red-700">
-                                    افزودن این موضوع به دیتابیس +
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-};
+router.put('/reply-ticket/:id', protect, admin, async (req, res) => {
+    const { reply } = req.body;
+    const ticket = await Ticket.findById(req.params.id);
+    if(ticket) {
+        ticket.reply = reply;
+        ticket.status = 'Answered';
+        await ticket.save();
+        res.json(ticket);
+    } else {
+        res.status(404).json({ message: 'تیکت یافت نشد' });
+    }
+});
 
-export default AdminPanel;
+// دریافت تمام چت‌ها (برای بررسی پاسخ‌های Fallback)
+router.get('/all-chats', protect, admin, async (req, res) => {
+    // فقط ۱۰۰ چت آخر را برمی‌گردانیم که سنگین نشود
+    const logs = await ChatLog.find().sort({ timestamp: -1 }).limit(100).populate('user', 'fullName');
+    res.json(logs);
+});
 
+module.exports = router;
