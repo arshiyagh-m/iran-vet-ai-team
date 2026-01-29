@@ -58,3 +58,4 @@ router.get('/all-chats', protect, admin, async (req, res) => {
 });
 
 module.exports = router;
+export default AdminPanel;
