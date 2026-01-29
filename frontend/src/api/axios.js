@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // در پروداکشن آدرس لیارا را قرار دهید
-const BASE_URL = 'http://localhost:3000/api'; 
+const BASE_URL = 'https://iran-vet-ai-team.onrender.com/api'; 
 
 export default axios.create({
     baseURL: BASE_URL
