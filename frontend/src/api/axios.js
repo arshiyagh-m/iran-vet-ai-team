@@ -1,6 +1,6 @@
-import axios from 'axios';
+import axios from 'axios';  // <--- حرف اول کوچک شد
 
-// در پروداکشن آدرس لیارا را قرار دهید
+// آدرس دقیق بک‌اند خودت را از داشبورد رندر چک کن (اگر اسم سرویس عوض شده، اینجا هم عوض کن)
 const BASE_URL = 'https://iran-vet-ai-team.onrender.com/api'; 
 
 export default axios.create({
@@ -9,6 +9,6 @@ export default axios.create({
 
 export const axiosPrivate = axios.create({
     baseURL: BASE_URL,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
+    withCredentials: true // این خط برای کوکی‌ها و لاگین معمولاً لازم است
 });
-
