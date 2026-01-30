@@ -1,6 +1,19 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
   <head>
+    <script>
+  window.addEventListener('error', function(e) {
+    document.body.innerHTML = `
+      <div style="background:red; color:white; padding:20px; font-size:20px; z-index:9999; position:fixed; top:0; left:0; width:100%; height:100%;">
+        <h1>⚠️ ارور پیدا شد:</h1>
+        <p style="font-weight:bold;">${e.message}</p>
+        <p>در فایل: ${e.filename}</p>
+        <p>خط: ${e.lineno}</p>
+      </div>
+    `;
+  });
+    </script>
+    
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>هوش مصنوعی دامپزشکی ایران</title>
