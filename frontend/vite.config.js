@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   base: '/',   // <--- این خط حیاتی است!
 })
-,
+
   server: {
     proxy: {
       // هر درخواستی که با /api شروع شود را به بک‌اند بفرست
