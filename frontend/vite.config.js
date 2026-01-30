@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vite' // حرف اول کوچک شد
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // تغییر مهم: اضافه کردن نقطه قبل از اسلش
+  base: '/',  // برای روتینگ صحیح باید اسلش خالی باشد
   build: {
     outDir: 'dist',
   }
