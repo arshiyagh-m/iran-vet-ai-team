@@ -12,7 +12,6 @@ export default {
           green: '#15803d',
           gold: '#eab308',
           light: '#f8fafc',
-          dark: '#1e293b'
         }
       },
       fontFamily: {
