@@ -1,5 +1,6 @@
 import React from 'react';
-import { FaCow, FaFeather, FaDog, FaUserMd } from 'react-icons/fa'; // آیکون‌های حیوانات
+// تغییر مهم: اضافه کردن عدد 6 به انتهای مسیر ایمپورت
+import { FaCow, FaFeather, FaDog, FaUserMd } from 'react-icons/fa6'; 
 
 const Home = () => {
   return (
@@ -66,7 +67,7 @@ const Home = () => {
   );
 };
 
-// کامپوننت کوچک برای کارت‌ها (فقط داخل همین فایل استفاده میشه)
+// کامپوننت کوچک برای کارت‌ها
 const ServiceCard = ({ icon, title, desc, color }) => (
   <div className="p-6 border border-gray-100 rounded-2xl hover:shadow-lg transition cursor-pointer group bg-white">
     <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${color} group-hover:scale-110 transition`}>
