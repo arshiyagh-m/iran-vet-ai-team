@@ -6,19 +6,19 @@ export default {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        sans: ['Vazirmatn', 'sans-serif'],
-      },
       colors: {
         brand: {
-          navy: '#0f172a', // سرمه‌ای تیره
-          green: '#15803d', // سبز طبیعت
-          light: '#f1f5f9',
-          gold: '#eab308'
+          navy: '#0f172a',
+          green: '#15803d',
+          gold: '#eab308',
+          light: '#f8fafc',
+          dark: '#1e293b'
         }
+      },
+      fontFamily: {
+        sans: ['Vazirmatn', 'sans-serif'],
       }
     },
   },
   plugins: [],
 }
-
