@@ -2,7 +2,7 @@ import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 
-// --- لی‌اوت‌ها (قالب‌های کلی) ---
+// --- لی‌اوت‌ها ---
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -19,60 +19,37 @@ import Chat from './pages/dashboard/Chat';
 import History from './pages/dashboard/History';
 import Profile from './pages/dashboard/Profile';
 
-// --- صفحات پنل ادمین ---
+// --- صفحات پنل ادمین (اینا رو قبلا ایمپورت نکرده بودی) ---
 import AdminDashboard from './pages/admin/Dashboard';
 import UsersManager from './pages/admin/Users';
 
 const App = () => {
   return (
     <div className="font-sans dir-rtl min-h-screen bg-gray-50 text-gray-800">
-      {/* کامپوننت نمایش پیام‌های سیستم (مثل "خوش آمدید" یا خطاها) */}
       <ToastContainer position="top-right" rtl={true} theme="colored" />
       
       <Routes>
         
-        {/* =========================================
-            بخش ۱: صفحات عمومی (با هدر و فوتر)
-           ========================================= */}
-        <Route 
-          path="/" 
-          element={<><Header /><Home /><Footer /></>} 
-        />
-        <Route 
-          path="/login" 
-          element={<><Header /><Login /><Footer /></>} 
-        />
-        <Route 
-          path="/register" 
-          element={<><Header /><Register /><Footer /></>} 
-        />
+        {/* ۱. صفحات عمومی */}
+        <Route path="/" element={<><Header /><Home /><Footer /></>} />
+        <Route path="/login" element={<><Header /><Login /><Footer /></>} />
+        <Route path="/register" element={<><Header /><Register /><Footer /></>} />
 
-        {/* =========================================
-            بخش ۲: پنل کاربری (با سایدبار)
-           ========================================= */}
+        {/* ۲. پنل کاربری */}
         <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<Overview />} />      {/* صفحه اول داشبورد */}
-          <Route path="chat" element={<Chat />} />    {/* صفحه چت */}
-          <Route path="history" element={<History />} /> {/* تاریخچه */}
-          <Route path="profile" element={<Profile />} /> {/* پروفایل */}
+          <Route index element={<Overview />} />
+          <Route path="chat" element={<Chat />} />
+          <Route path="history" element={<History />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
 
-        {/* =========================================
-            بخش ۳: پنل ادمین (مخصوص مدیران)
-           ========================================= */}
+        {/* ۳. پنل ادمین (این بخش مهمیه که نداشتی) */}
         <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} /> {/* آمار کلی */}
-          <Route path="users" element={<UsersManager />} /> {/* مدیریت کاربران */}
-          <Route path="tickets" element={
-            <div className="flex items-center justify-center h-full text-gray-500">
-              بخش مدیریت تیکت‌ها (به زودی)
-            </div>
-          } />
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UsersManager />} />
         </Route>
 
-        {/* =========================================
-            مدیریت صفحات اشتباه (404)
-           ========================================= */}
+        {/* ۴. صفحه ۴۰۴ */}
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
             <h1 className="text-9xl font-bold text-gray-300">404</h1>
