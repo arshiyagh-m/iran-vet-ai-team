@@ -1,5 +1,5 @@
 {
-  "platform": "react",
-  "app": "iran-veterinary-ai-client",
+  "platform": "static",
+  "app": "iran-vet-ai-frontend",
   "port": 80
 }
