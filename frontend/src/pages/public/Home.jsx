@@ -1,6 +1,6 @@
 import React from 'react';
-// تغییر مهم: اضافه کردن عدد 6 به انتهای مسیر ایمپورت
-import { FaCow, FaFeather, FaDog, FaUserMd } from 'react-icons/fa6'; 
+// تغییر نام FaUserMd به FaUserDoctor در نسخه جدید
+import { FaCow, FaFeather, FaDog, FaUserDoctor } from 'react-icons/fa6'; 
 
 const Home = () => {
   return (
@@ -52,9 +52,9 @@ const Home = () => {
               desc="سگ، گربه و پرندگان زینتی" 
               color="bg-purple-50 text-purple-600"
             />
-             {/* کارت ۴: دستیار عمومی */}
+             {/* کارت ۴: دستیار عمومی (اینجا آیکون جدید استفاده شد) */}
             <ServiceCard 
-              icon={<FaUserMd size={30} />} 
+              icon={<FaUserDoctor size={30} />} 
               title="دستیار عمومی" 
               desc="سوالات کلی و مدیریت بهداشتی" 
               color="bg-green-50 text-green-600"
