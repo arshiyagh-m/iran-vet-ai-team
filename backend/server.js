@@ -148,6 +148,11 @@ app.post('/api/chat/message', authenticateToken, async (req, res) => {
   }
 });
 
+// روت صفحه اصلی (برای تست سالم بودن سرور)
+app.get('/', (req, res) => {
+    res.send('<h1>✅ Server is Running Successfully!</h1><p>Iran Vet AI Backend</p>');
+});
+
 // استارت
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
