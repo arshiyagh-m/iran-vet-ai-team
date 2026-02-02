@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
-const licenseSchema = new mongoose.Schema({
-    code: { type: String, required: true, unique: true }, // کد لایسنس
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // کاربری که لایسنس را خریده
-    tokens: { type: Number, required: true }, // تعداد توکن باقی‌مانده
-    expiryDate: { type: Date }, // تاریخ انضا
+const LicenseSchema = new mongoose.Schema({
+    code: { type: String, required: true, unique: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    tokens: Number,
+    tier: { type: String, enum: ['Basic', 'Pro', 'Enterprise'], default: 'Basic' },
+    expiryDate: Date,
     isActive: { type: Boolean, default: true },
-    tier: { type: String, default: 'Standard' } // نوع پلن
+    createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('License', licenseSchema);
-
+module.exports = mongoose.model('License', LicenseSchema);
