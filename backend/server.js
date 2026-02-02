@@ -1,94 +1,131 @@
+require('dotenv').config();
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const OpenAI = require('openai');
+
+// ایمپورت مدل‌ها و ابزارها
+const User = require('./models/User');
+const KnowledgeBase = require('./models/KnowledgeBase');
+const importData = require('./importData'); // همان فایل ایمپورتر که قبلاً ساختی
 
 const app = express();
-const PORT = 5000;
-const SECRET_KEY = 'secret-key-iran-vet-ai'; // در پروژه واقعی ببر توی env
+const PORT = process.env.PORT || 5000;
 
+// تنظیمات امنیتی و پارسر
 app.use(cors());
 app.use(express.json());
 
-// --- ۱. دیتابیس موقت (چون هنوز دیتابیس اصلی وصل نیست) ---
-let users = [
-  { id: 1, name: 'ارشیا قنبری', email: 'admin@test.com', password: '123', role: 'admin', tokens: 9999 },
-  { id: 2, name: 'امین پاشایی', email: 'amin@test.com', password: '123', role: 'admin', tokens: 9999 },
-  { id: 3, name: 'کاربر تست', email: 'user@test.com', password: '123', role: 'user', tokens: 10 }
-];
+// تنظیم OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, 
+});
 
-// دیتابیس شبیه‌سازی شده بیماری‌ها (برای جلوگیری از توهم)
-const diseaseDB = {
-  'تب': { reply: 'تب بالا در دام می‌تواند نشانه تب برفکی یا پنومونی باشد. تجویز: پنی‌سیلین و تب‌بر.', ref: 'رفرنس داخلی: پروتکل تب برفکی ص ۴۰' },
-  'لنگش': { reply: 'لنگش معمولاً نشانه گندیدگی سم (Foot Rot) است. شستشو با سولفات مس توصیه می‌شود.', ref: 'رفرنس داخلی: کتاب بیماری‌های اندام حرکتی' },
-  'اسهال': { reply: 'اسهال در گوساله زیر یک ماه معمولاً ویروسی یا کلی‌باسیلوزی است. مایع‌درمانی فوری الزامی است.', ref: 'رفرنس داخلی: طب داخلی دام بزرگ' }
-};
+// --- ۱. اتصال به دیتابیس و اجرای ایمپورتر ---
+mongoose.connect(process.env.MONGO_URI)
+  .then(async () => {
+    console.log('✅ Connected to MongoDB');
+    // هر بار که سرور روشن میشه، فایل‌های اکسل رو چک میکنه
+    await importData();
+  })
+  .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
-// --- ۲. میدل‌ور احراز هویت (Security) ---
+// --- ۲. میدل‌ور احراز هویت ---
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.sendStatus(401);
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'دسترسی غیرمجاز' });
 
-  jwt.verify(token, SECRET_KEY, (err, user) => {
-    if (err) return res.sendStatus(403);
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: 'توکن نامعتبر است' });
     req.user = user;
     next();
   });
 };
 
-// --- ۳. روت‌های Auth (ورود و ثبت‌نام) ---
-app.post('/api/auth/login', (req, res) => {
+// --- ۳. روت‌های کاربری (Auth) ---
+app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
-  const user = users.find(u => u.email === email && u.password === password);
-  
+  // نکته: در نسخه نهایی باید پسوردها هش شده باشند (bcrypt)
+  const user = await User.findOne({ email, password });
+
   if (user) {
-    const token = jwt.sign({ id: user.id, role: user.role }, SECRET_KEY);
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
     res.json({ token, user: { name: user.name, role: user.role, tokens: user.tokens } });
   } else {
     res.status(401).json({ message: 'ایمیل یا رمز عبور اشتباه است' });
   }
 });
 
-app.post('/api/auth/register', (req, res) => {
-  // اینجا فقط شبیه‌سازی می‌کنیم
-  res.json({ message: 'ثبت نام انجام شد' });
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const newUser = new User(req.body);
+    await newUser.save();
+    res.json({ message: 'ثبت نام موفقیت‌آمیز بود' });
+  } catch (error) {
+    res.status(500).json({ message: 'خطا در ثبت نام' });
+  }
 });
 
-// --- ۴. روت هوش مصنوعی (Chat) ---
-app.post('/api/chat/message', authenticateToken, (req, res) => {
+// --- ۴. روت هوش مصنوعی (RAG: جستجو + پاسخ) ---
+app.post('/api/chat/message', authenticateToken, async (req, res) => {
   const { prompt } = req.body;
-  
-  // شبیه‌سازی تاخیر هوش مصنوعی
-  setTimeout(() => {
-    // جستجو در دیتابیس (Keyword Search)
-    let response = { 
-      reply: 'متاسفانه برای این علائم در دیتابیس فعلی اطلاعاتی یافت نشد. لطفاً با دامپزشک تماس بگیرید.', 
-      reference: 'سیستم هوشمند' 
-    };
 
-    // منطق ساده جستجو
-    if (prompt.includes('تب') || prompt.includes('داغ')) response = diseaseDB['تب'];
-    else if (prompt.includes('لنگ') || prompt.includes('پا')) response = diseaseDB['لنگش'];
-    else if (prompt.includes('اسهال') || prompt.includes('شکم')) response = diseaseDB['اسهال'];
+  try {
+    // الف: اول در دیتابیس خودمان جستجو کن (RAG)
+    // جستجوی ساده متنی (Regex)
+    const contextDocs = await KnowledgeBase.find({
+      $or: [
+        { title: { $regex: prompt, $options: 'i' } },
+        { content: { $regex: prompt, $options: 'i' } },
+        { tags: { $in: [new RegExp(prompt, 'i')] } }
+      ]
+    }).limit(3);
 
-    res.json(response);
-  }, 1000);
+    // ساخت کانتکست برای هوش مصنوعی
+    let contextText = "";
+    let reference = "General Knowledge";
+    
+    if (contextDocs.length > 0) {
+      contextText = contextDocs.map(d => `${d.title}: ${d.content}`).join("\n");
+      reference = `برگرفته از: ${contextDocs[0].sourceFile} - ${contextDocs[0].title}`;
+    }
+
+    // ب: ارسال به OpenAI
+    const completion = await openai.chat.completions.create({
+      messages: [
+        { role: "system", content: "شما یک دستیار هوشمند دامپزشکی هستید. با استفاده از اطلاعات زیر به سوال کاربر پاسخ دهید." },
+        { role: "system", content: `اطلاعات علمی موجود:\n${contextText}` },
+        { role: "user", content: prompt }
+      ],
+      model: "gpt-3.5-turbo",
+    });
+
+    const aiReply = completion.choices[0].message.content;
+
+    // ج: کسر توکن از کاربر (اختیاری)
+    // await User.findByIdAndUpdate(req.user.id, { $inc: { tokens: -1 } });
+
+    res.json({ reply: aiReply, reference });
+
+  } catch (error) {
+    console.error("AI Error:", error);
+    // فال‌بک (اگر کلید OpenAI کار نکرد یا تمام شد)
+    res.json({ 
+      reply: "سیستم هوشمند موقتاً در دسترس نیست، اما جستجوی دیتابیس انجام شد.", 
+      reference: "خطای سرور" 
+    });
+  }
 });
 
-// --- ۵. روت‌های ادمین (Admin) ---
-app.get('/api/admin/users', authenticateToken, (req, res) => {
-  // فقط ادمین‌ها دسترسی دارند
+// --- ۵. روت‌های ادمین ---
+app.get('/api/admin/users', authenticateToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.sendStatus(403);
+  const users = await User.find({}, '-password'); // پسورد را برنگردان
   res.json(users);
 });
 
-// تغییر رمز کاربر توسط ادمین
-app.post('/api/admin/reset-password', authenticateToken, (req, res) => {
-  if (req.user.role !== 'admin') return res.sendStatus(403);
-  // در واقعیت اینجا دیتابیس آپدیت میشه
-  res.json({ message: 'رمز عبور با موفقیت ریست شد' });
-});
-
+// استارت سرور
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
