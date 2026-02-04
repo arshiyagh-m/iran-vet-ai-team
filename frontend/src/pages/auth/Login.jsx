@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { FaStethoscope } from 'react-icons/fa';
-// ایمپورت کلاینت برای درخواست به سرور
-// import client from '../../api/client'; 
+import client from '../../api/client'; // اتصال به سرور
 
 const Login = () => {
   const navigate = useNavigate();
@@ -18,20 +17,30 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // فعلاً چون بک‌ند وصل نیست، شبیه‌سازی می‌کنیم
-      // const res = await client.post('/auth/login', formData);
+      // ارسال درخواست واقعی به بک‌‌اند
+      const res = await client.post('/auth/login', formData);
       
-      // شبیه‌سازی موفقیت (بعداً پاک میشه)
-      setTimeout(() => {
-        localStorage.setItem('token', 'fake-jwt-token'); // ذخیره توکن
-        toast.success('خوش آمدید! 👋');
-        navigate('/dashboard'); // هدایت به داشبورد
-      }, 1500);
+      // ذخیره توکن و اطلاعات کاربر
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
+
+      toast.success(`خوش آمدید ${res.data.user.name} 👋`);
+
+      // هدایت هوشمند
+      if (res.data.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard/chat'); // مستقیم بره توی چت
+      }
+
+      // یک رفرش ریز برای آپدیت شدن هدر
+      setTimeout(() => window.location.reload(), 100);
 
     } catch (error) {
-      toast.error('اطلاعات ورود اشتباه است.');
+      const msg = error.response?.data?.message || 'اطلاعات ورود اشتباه است.';
+      toast.error(msg);
     } finally {
-      // setLoading(false); // در حالت واقعی آنکامنت شود
+      setLoading(false);
     }
   };
 
@@ -39,7 +48,6 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         
-        {/* لوگو بالای فرم */}
         <div className="flex justify-center mb-6">
           <div className="w-16 h-16 bg-brand-navy rounded-2xl flex items-center justify-center text-white text-3xl">
             <FaStethoscope />
@@ -51,9 +59,9 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">ایمیل یا شماره موبایل</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">ایمیل</label>
             <input 
-              type="text"
+              type="email"
               required
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-green focus:ring-2 focus:ring-green-100 outline-none transition"
               placeholder="example@mail.com"
@@ -65,7 +73,6 @@ const Login = () => {
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm font-medium text-gray-700">رمز عبور</label>
-              <a href="#" className="text-xs text-brand-green hover:underline">رمز را فراموش کردید؟</a>
             </div>
             <input 
               type="password"
@@ -80,9 +87,11 @@ const Login = () => {
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full bg-brand-navy text-white py-3.5 rounded-xl font-bold hover:bg-gray-800 transition shadow-lg shadow-blue-900/20 flex justify-center items-center"
+            className={`w-full text-white py-3.5 rounded-xl font-bold transition shadow-lg flex justify-center items-center
+              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-brand-navy hover:bg-gray-800 shadow-blue-900/20'}
+            `}
           >
-            {loading ? 'در حال پردازش...' : 'ورود به سیستم'}
+            {loading ? 'در حال ورود...' : 'ورود به سیستم'}
           </button>
         </form>
 
@@ -99,4 +108,3 @@ const Login = () => {
 };
 
 export default Login;
-
