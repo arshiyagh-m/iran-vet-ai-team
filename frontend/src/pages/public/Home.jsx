@@ -1,5 +1,5 @@
 import React from 'react';
-// تغییر نام FaUserMd به FaUserDoctor در نسخه جدید
+import { Link } from 'react-router-dom';
 import { FaCow, FaFeather, FaDog, FaUserDoctor } from 'react-icons/fa6'; 
 
 const Home = () => {
@@ -19,9 +19,14 @@ const Home = () => {
             تشخیص اولیه بیماری، محاسبه دوز دارو و مشاوره تخصصی در کمتر از ۳۰ ثانیه.
             بدون توهم، با رفرنس علمی معتبر.
           </p>
-          <button className="px-8 py-4 bg-brand-navy text-white text-lg rounded-xl shadow-xl hover:bg-gray-800 transition transform hover:-translate-y-1">
-            شروع مشاوره رایگان
-          </button>
+          
+          {/* دکمه اصلی - مستقیم به چت */}
+          <Link 
+            to="/dashboard/chat" 
+            className="inline-block px-8 py-4 bg-brand-navy text-white text-lg rounded-xl shadow-xl hover:bg-gray-800 transition transform hover:-translate-y-1 font-bold"
+          >
+            شروع مشاوره رایگان (ورود به چت)
+          </Link>
         </div>
       </section>
 
@@ -31,28 +36,24 @@ const Home = () => {
           <h2 className="text-3xl font-bold text-center text-brand-navy mb-12">خدمات تخصصی ما</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* کارت ۱: دام بزرگ */}
             <ServiceCard 
               icon={<FaCow size={30} />} 
               title="دام بزرگ" 
               desc="گاو، گوسفند، بز و شتر" 
               color="bg-blue-50 text-blue-600"
             />
-             {/* کارت ۲: طیور */}
             <ServiceCard 
               icon={<FaFeather size={30} />} 
               title="صنعت طیور" 
               desc="مرغ گوشتی، تخم‌گذار و بوقلمون" 
               color="bg-orange-50 text-orange-600"
             />
-             {/* کارت ۳: حیوانات خانگی */}
             <ServiceCard 
               icon={<FaDog size={30} />} 
               title="حیوانات خانگی" 
               desc="سگ، گربه و پرندگان زینتی" 
               color="bg-purple-50 text-purple-600"
             />
-             {/* کارت ۴: دستیار عمومی (اینجا آیکون جدید استفاده شد) */}
             <ServiceCard 
               icon={<FaUserDoctor size={30} />} 
               title="دستیار عمومی" 
@@ -67,7 +68,7 @@ const Home = () => {
   );
 };
 
-// کامپوننت کوچک برای کارت‌ها
+// کامپوننت کارت
 const ServiceCard = ({ icon, title, desc, color }) => (
   <div className="p-6 border border-gray-100 rounded-2xl hover:shadow-lg transition cursor-pointer group bg-white">
     <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${color} group-hover:scale-110 transition`}>
