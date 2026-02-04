@@ -29,10 +29,22 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch(err => {
     console.error('❌ MongoDB Connection Error:', err.message);
-    // نکته: اگر اینجا ارور bad auth دیدی، یعنی رمزت توی Render غلطه
   });
 
-// --- ۲. میدل‌ور احراز هویت ---
+// --- ۲. روت‌های تست (اصلاح شده برای حل مشکل دکمه تست) ---
+
+// الف: وقتی آدرس سایت رو توی مرورگر میزنی
+app.get('/', (req, res) => {
+    res.send('<h1>✅ Server is Running Successfully!</h1><p>Iran Vet AI Backend</p>');
+});
+
+// ب: وقتی دکمه "تست اتصال" رو توی فرانت‌اند میزنی (این همون تیکه گمشده بود!)
+app.get('/api', (req, res) => {
+    res.status(200).json({ message: '✅ ارتباط با سرور برقرار است (API Ready)' });
+});
+
+
+// --- ۳. میدل‌ور احراز هویت ---
 const authenticateToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
   if (!token) return res.status(401).json({ message: 'دسترسی غیرمجاز' });
@@ -44,18 +56,18 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// --- ۳. روت‌های احراز هویت ---
+// --- ۴. روت‌های احراز هویت ---
 
-// ✅ ثبت نام (با گزارش لحظه‌به‌لحظه)
+// ✅ ثبت نام
 app.post('/api/auth/register', async (req, res) => {
-  console.log("📩 درخواست ثبت نام دریافت شد:", req.body); // لاگ ورودی
+  console.log("📩 درخواست ثبت نام دریافت شد:", req.body); 
 
   try {
     const { fullName, email, phone, password } = req.body;
 
     // الف: چک کردن فیلدها
     if (!fullName || !email || !phone || !password) {
-      return res.status(400).json({ message: 'لطفاً تمام فیلدها (نام، ایمیل، موبایل و رمز) را پر کنید.' });
+      return res.status(400).json({ message: 'لطفاً تمام فیلدها را پر کنید.' });
     }
 
     // ب: چک کردن ایمیل تکراری
@@ -83,13 +95,12 @@ app.post('/api/auth/register', async (req, res) => {
     });
 
     await newUser.save();
-    console.log("✅ کاربر جدید با موفقیت ساخته شد:", email);
+    console.log("✅ کاربر جدید ساخته شد:", email);
     
     res.status(201).json({ message: 'ثبت نام با موفقیت انجام شد' });
 
   } catch (error) {
     console.error("❌ خطا در ثبت نام:", error);
-    // ارسال متن دقیق خطا به فرانت‌اند
     res.status(500).json({ message: `خطای سرور: ${error.message}` });
   }
 });
@@ -116,7 +127,7 @@ app.post('/api/auth/login', async (req, res) => {
         } 
       });
     } else {
-      console.log("⛔ ورود ناموفق (رمز غلط):", email);
+      console.log("⛔ ورود ناموفق:", email);
       res.status(401).json({ message: 'ایمیل یا رمز عبور اشتباه است' });
     }
   } catch (error) {
@@ -125,10 +136,10 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// --- ۴. روت‌های ادمین ---
+// --- ۵. روت‌های ادمین ---
 app.use('/api/admin', adminRoutes);
 
-// --- ۵. هوش مصنوعی ---
+// --- ۶. هوش مصنوعی ---
 app.post('/api/chat/message', authenticateToken, async (req, res) => {
   const { prompt } = req.body;
 
@@ -193,11 +204,7 @@ app.post('/api/chat/message', authenticateToken, async (req, res) => {
   }
 });
 
-// روت تست
-app.get('/', (req, res) => {
-    res.send('<h1>✅ Server is Running Successfully!</h1>');
-});
-
+// استارت
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
