@@ -9,13 +9,9 @@ const OpenAI = require('openai');
 const User = require('./models/User');
 const KnowledgeBase = require('./models/KnowledgeBase');
 const ChatLog = require('./models/ChatLog');
-const importData = require('./importData');
-
-// --- ایمپورت روت‌های ادمین ---
 const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
-// پورت ۳۰۰۰ معمولاً برای Render بهتر جواب می‌دهد، اما ۵۰۰۰ هم کار می‌کند
 const PORT = process.env.PORT || 3000; 
 
 // تنظیمات
@@ -26,13 +22,15 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, 
 });
 
-// --- ۱. اتصال به دیتابیس ---
+// --- ۱. اتصال به دیتابیس (با لاگ دقیق) ---
 mongoose.connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log('✅ Connected to MongoDB');
-    // await importData(); // فعلاً غیرفعال تا سرعت استارت بالا برود
+  .then(() => {
+    console.log('✅ Connected to MongoDB Successfully');
   })
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+  .catch(err => {
+    console.error('❌ MongoDB Connection Error:', err.message);
+    // نکته: اگر اینجا ارور bad auth دیدی، یعنی رمزت توی Render غلطه
+  });
 
 // --- ۲. میدل‌ور احراز هویت ---
 const authenticateToken = (req, res, next) => {
@@ -46,14 +44,16 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// --- ۳. روت‌های احراز هویت (Login/Register) ---
+// --- ۳. روت‌های احراز هویت ---
 
-// ✅ اصلاح شده: ثبت نام با اعتبارسنجی دقیق و شماره موبایل
+// ✅ ثبت نام (با گزارش لحظه‌به‌لحظه)
 app.post('/api/auth/register', async (req, res) => {
+  console.log("📩 درخواست ثبت نام دریافت شد:", req.body); // لاگ ورودی
+
   try {
     const { fullName, email, phone, password } = req.body;
 
-    // الف: چک کردن اینکه همه فیلدها پر شده باشند
+    // الف: چک کردن فیلدها
     if (!fullName || !email || !phone || !password) {
       return res.status(400).json({ message: 'لطفاً تمام فیلدها (نام، ایمیل، موبایل و رمز) را پر کنید.' });
     }
@@ -61,31 +61,36 @@ app.post('/api/auth/register', async (req, res) => {
     // ب: چک کردن ایمیل تکراری
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
+      console.log("⛔ تکراری: ایمیل " + email);
       return res.status(400).json({ message: 'این ایمیل قبلاً ثبت شده است.' });
     }
 
-    // ج: چک کردن شماره موبایل تکراری
+    // ج: چک کردن موبایل تکراری
     const existingPhone = await User.findOne({ phone });
     if (existingPhone) {
+      console.log("⛔ تکراری: موبایل " + phone);
       return res.status(400).json({ message: 'این شماره موبایل قبلاً ثبت شده است.' });
     }
 
-    // د: ساخت کاربر جدید
+    // د: ساخت کاربر
     const newUser = new User({
       fullName,
       email,
       phone,
-      password, // نکته: در نسخه نهایی بهتر است هش شود
-      role: 'user', // پیش‌فرض کاربر عادی
-      tokens: 5     // ۵ توکن هدیه
+      password, 
+      role: 'user',
+      tokens: 5
     });
 
     await newUser.save();
+    console.log("✅ کاربر جدید با موفقیت ساخته شد:", email);
+    
     res.status(201).json({ message: 'ثبت نام با موفقیت انجام شد' });
 
   } catch (error) {
-    console.error("Register Error:", error);
-    res.status(500).json({ message: 'خطای سرور: ' + error.message });
+    console.error("❌ خطا در ثبت نام:", error);
+    // ارسال متن دقیق خطا به فرانت‌اند
+    res.status(500).json({ message: `خطای سرور: ${error.message}` });
   }
 });
 
@@ -97,11 +102,11 @@ app.post('/api/auth/login', async (req, res) => {
     const user = await User.findOne({ email, password });
 
     if (user) {
-      // اگر توکن نداشت (کاربر قدیمی)، مقدار ۵ بده
       if (user.tokens === undefined) user.tokens = 5; 
       
       const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
       
+      console.log("✅ ورود موفق:", email);
       res.json({ 
         token, 
         user: { 
@@ -111,33 +116,33 @@ app.post('/api/auth/login', async (req, res) => {
         } 
       });
     } else {
+      console.log("⛔ ورود ناموفق (رمز غلط):", email);
       res.status(401).json({ message: 'ایمیل یا رمز عبور اشتباه است' });
     }
   } catch (error) {
+    console.error("❌ خطا در لاگین:", error);
     res.status(500).json({ message: 'خطای سرور در ورود' });
   }
 });
 
-// --- ۴. اتصال روت‌های ادمین ---
+// --- ۴. روت‌های ادمین ---
 app.use('/api/admin', adminRoutes);
 
-// --- ۵. هوش مصنوعی (RAG + Log + Token) ---
+// --- ۵. هوش مصنوعی ---
 app.post('/api/chat/message', authenticateToken, async (req, res) => {
   const { prompt } = req.body;
 
   try {
-    // الف: چک کردن موجودی
     const currentUser = await User.findById(req.user.id);
     if (!currentUser) return res.status(404).json({ reply: "کاربر یافت نشد", reference: "Error" });
 
     if (currentUser.tokens <= 0 && currentUser.role !== 'admin') {
         return res.status(403).json({ 
-            reply: "اعتبار توکن شما تمام شده است. لطفاً اشتراک تهیه کنید.",
+            reply: "اعتبار توکن شما تمام شده است.",
             reference: "System"
         });
     }
 
-    // ب: جستجو در دیتابیس (RAG)
     const contextDocs = await KnowledgeBase.find({
       $or: [
         { title: { $regex: prompt, $options: 'i' } },
@@ -147,17 +152,16 @@ app.post('/api/chat/message', authenticateToken, async (req, res) => {
     }).limit(3);
 
     let contextText = "";
-    let reference = "General AI Knowledge";
+    let reference = "AI Knowledge";
     
     if (contextDocs.length > 0) {
       contextText = contextDocs.map(d => `${d.title}: ${d.content}`).join("\n");
-      reference = `منبع داخلی: ${contextDocs[0].sourceFile} - ${contextDocs[0].title}`;
+      reference = `منبع: ${contextDocs[0].sourceFile} - ${contextDocs[0].title}`;
     }
 
-    // ج: ارسال به OpenAI
     const completion = await openai.chat.completions.create({
       messages: [
-        { role: "system", content: "شما دستیار دامپزشکی هستید. فقط بر اساس اطلاعات داده شده پاسخ دهید." },
+        { role: "system", content: "شما دستیار دامپزشکی هستید." },
         { role: "system", content: `Context:\n${contextText}` },
         { role: "user", content: prompt }
       ],
@@ -166,7 +170,6 @@ app.post('/api/chat/message', authenticateToken, async (req, res) => {
 
     const aiReply = completion.choices[0].message.content;
 
-    // د: ذخیره لاگ
     await ChatLog.create({
         user: req.user.id,
         question: prompt,
@@ -175,7 +178,6 @@ app.post('/api/chat/message', authenticateToken, async (req, res) => {
         isFallbackResponse: contextDocs.length === 0
     });
 
-    // ه: کسر توکن
     if (currentUser.role !== 'admin') {
         await User.findByIdAndUpdate(req.user.id, { $inc: { tokens: -1 } });
     }
@@ -191,12 +193,11 @@ app.post('/api/chat/message', authenticateToken, async (req, res) => {
   }
 });
 
-// روت صفحه اصلی (برای تست سالم بودن سرور در Render)
+// روت تست
 app.get('/', (req, res) => {
-    res.send('<h1>✅ Server is Running Successfully!</h1><p>Iran Vet AI Backend</p>');
+    res.send('<h1>✅ Server is Running Successfully!</h1>');
 });
 
-// استارت
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
