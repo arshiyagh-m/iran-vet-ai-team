@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 const client = axios.create({
-  // آدرس سرور بک‌اند (اگر روی سیستم خودت ران کردی)
-  baseURL: 'https://vet-ai-api.onrender.com', 
+  // ⚠️ نکته مهم: آخرش حتماً باید /api داشته باشه
+  // ⚠️ نکته مهم ۲: حتماً باید https باشه
+  baseURL: 'https://vet-ai-api.onrender.com/api', 
 });
 
-// این تیکه کد، توکن رو خودکار به هدر تمام درخواست‌ها اضافه می‌کنه
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -15,4 +15,3 @@ client.interceptors.request.use((config) => {
 });
 
 export default client;
-
