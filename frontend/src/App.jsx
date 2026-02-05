@@ -43,6 +43,8 @@ const App = () => {
           <Route path="history" element={<History />} />
           <Route path="profile" element={<Profile />} />
           <Route path="tickets" element={<Tickets />} />
+          <Route path="tickets/:id" element={<TicketDetail />} />
+          <Route path="change-password" element={<ChangePassword />} />
         </Route>
 
         {/* ۳. پنل ادمین (این بخش مهمیه که نداشتی) */}
