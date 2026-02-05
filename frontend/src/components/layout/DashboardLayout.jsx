@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { FaHome, FaComments, FaHistory, FaUser, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
-import { FaHeadset } from 'react-icons/fa'; 
-import { FaBell, FaCircle } from 'react-icons/fa';
+import { FaHome, FaComments, FaHistory, FaUser, FaSignOutAlt, FaBars, FaTimes, FaHeadset, FaBell, FaCircle } from 'react-icons/fa';
 import client from '../api/client';
 
 const DashboardLayout = () => {
@@ -10,22 +8,65 @@ const DashboardLayout = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState({ name: 'کاربر', role: 'user' });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // استیت‌های مربوط به نوتیفیکیشن
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifBox, setShowNotifBox] = useState(false);
 
-  // ۱. خواندن اطلاعات واقعی کاربر
+  // ۱. خواندن اطلاعات کاربر و نوتیفیکیشن‌ها
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+    const fetchUserData = async () => {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+
+        // 🔒 چک کردن اجبار تغییر رمز
+        // اگر کاربر باید رمز عوض کند و الان در صفحه تغییر رمز نیست، هدایتش کن
+        if (parsedUser.mustChangePassword && location.pathname !== '/dashboard/change-password') {
+          navigate('/dashboard/change-password');
+        }
+      }
+    };
+
+    const fetchNotifications = async () => {
+      try {
+        const res = await client.get('/notifications');
+        setNotifications(res.data);
+      } catch (error) {
+        console.error("خطا در دریافت نوتیفیکیشن", error);
+      }
+    };
+
+    fetchUserData();
+    fetchNotifications();
+
+    // چک کردن نوتیفیکیشن هر ۳۰ ثانیه
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+
+  }, [location, navigate]);
 
   // ۲. تابع خروج از حساب
   const handleLogout = () => {
-    // پاک کردن اطلاعات
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // هدایت به صفحه ورود
     navigate('/login');
+  };
+
+  // ۳. مدیریت کلیک روی نوتیفیکیشن
+  const handleReadNotif = async (notif) => {
+    // اگر خوانده نشده بود، درخواست خواندن بفرست
+    if (!notif.isRead) {
+      try {
+        await client.put(`/notifications/${notif._id}/read`);
+        // آپدیت لوکال برای تغییر رنگ آنی
+        setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n));
+      } catch (e) { console.error(e); }
+    }
+    // بستن باکس و رفتن به لینک
+    setShowNotifBox(false);
+    if (notif.link) navigate(notif.link);
   };
 
   const menuItems = [
@@ -36,17 +77,18 @@ const DashboardLayout = () => {
     { icon: <FaHeadset />, label: 'پشتیبانی', path: '/dashboard/tickets' },
   ];
 
-  // تشخیص اینکه آیا لینک فعال است یا نه (برای هایلایت کردن)
+  // تشخیص اینکه آیا لینک فعال است یا نه
   const isActive = (path) => {
     if (path === '/dashboard' && location.pathname !== '/dashboard') return false;
     return location.pathname.startsWith(path);
   };
 
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden dir-rtl font-sans">
       
       {/* --- نوار کناری (Sidebar) --- */}
-      {/* این بخش در دسکتاپ همیشه هست، در موبایل کشویی میشه */}
       <aside className={`
         fixed md:static inset-y-0 right-0 z-50 w-64 bg-slate-900 text-white shadow-2xl transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
@@ -111,17 +153,69 @@ const DashboardLayout = () => {
       {/* --- محتوای اصلی --- */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         
-        {/* هدر موبایل */}
-        <header className="h-16 bg-white shadow-sm flex items-center justify-between px-4 md:hidden z-30 relative">
-          <div className="flex items-center gap-2">
+        {/* هدر موبایل + نوتیفیکیشن */}
+        <header className="h-16 bg-white shadow-sm flex items-center justify-between px-4 z-30 relative">
+          
+          <div className="flex items-center gap-3 md:hidden">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 text-slate-600 hover:bg-gray-100 rounded-lg transition"
+            >
+              <FaBars size={24} />
+            </button>
             <span className="font-bold text-slate-800 text-lg">Iran Vet AI</span>
           </div>
-          <button 
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 text-slate-600 hover:bg-gray-100 rounded-lg transition"
-          >
-            <FaBars size={24} />
-          </button>
+
+          {/* بخش دکمه نوتیفیکیشن (هم در موبایل هم دسکتاپ) */}
+          <div className="relative mr-auto md:mr-0 ml-4">
+            <button 
+              onClick={() => setShowNotifBox(!showNotifBox)} 
+              className="relative p-2 text-gray-600 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
+            >
+              <FaBell size={24} />
+              {/* نشانگر تعداد پیام‌های نخوانده */}
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+              )}
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+              )}
+            </button>
+
+            {/* باکس باز شونده نوتیفیکیشن */}
+            {showNotifBox && (
+              <div className="absolute left-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50">
+                <div className="p-3 border-b bg-gray-50 font-bold text-gray-700 flex justify-between items-center">
+                  <span>اعلان‌ها</span>
+                  <span className="text-xs font-normal text-gray-500">{unreadCount} پیام جدید</span>
+                </div>
+                <div className="max-h-80 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="p-8 text-center text-gray-400 text-sm">هیچ اعلان جدیدی ندارید.</p>
+                  ) : (
+                    notifications.map(n => (
+                      <div 
+                        key={n._id} 
+                        onClick={() => handleReadNotif(n)}
+                        className={`p-3 border-b hover:bg-gray-50 cursor-pointer transition flex gap-3 ${n.isRead ? 'bg-white opacity-70' : 'bg-blue-50/50'}`}
+                      >
+                        <div className="mt-1">
+                          {!n.isRead ? <FaCircle size={8} className="text-blue-500" /> : <FaCircle size={8} className="text-gray-300" />}
+                        </div>
+                        <div>
+                          <span className={`text-sm block mb-1 ${!n.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-600'}`}>{n.title}</span>
+                          <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{n.message}</p>
+                          <span className="text-[10px] text-gray-400 mt-2 block text-left dir-ltr">
+                            {new Date(n.createdAt).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'})}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </header>
 
         {/* محل نمایش صفحات (داشبورد، چت و...) */}
