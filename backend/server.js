@@ -137,6 +137,41 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// ✅ روت جدید: ویرایش پروفایل کاربر
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const { fullName, email, phone, jobType } = req.body;
+    const userId = req.user.id;
+
+    // پیدا کردن و آپدیت کردن کاربر
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { fullName, email, phone, jobType },
+      { new: true } // این گزینه میگه نسخه آپدیت شده رو برگردون
+    ).select('-password'); // رمز عبور رو برنگردون
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'کاربر یافت نشد' });
+    }
+
+    res.json({ 
+      message: 'پروفایل با موفقیت آپدیت شد',
+      user: {
+        name: updatedUser.fullName,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+        tokens: updatedUser.tokens,
+        jobType: updatedUser.jobType
+      }
+    });
+
+  } catch (error) {
+    console.error("Profile Update Error:", error);
+    res.status(500).json({ message: 'خطا در ویرایش اطلاعات' });
+  }
+});
+
 // --- ۵. روت‌های ادمین ---
 app.use('/api/admin', adminRoutes);
 
