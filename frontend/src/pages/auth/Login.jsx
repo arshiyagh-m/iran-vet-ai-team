@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaStethoscope } from 'react-icons/fa';
-import client from '../../api/client'; // اتصال به سرور
+import { FaEnvelope, FaLock, FaSignInAlt, FaArrowLeft } from 'react-icons/fa';
+import client from '../../api/client';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -12,101 +12,115 @@ const Login = () => {
     password: ''
   });
 
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // ارسال درخواست واقعی به بک‌‌اند
       const res = await client.post('/auth/login', formData);
-      
+
       // ذخیره توکن و اطلاعات کاربر
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
 
-      toast.success(`خوش آمدید ${res.data.user.name} 👋`);
+      toast.success(`خوش آمدید ${res.data.user.name} عزیز 👋`);
 
-      // هدایت هوشمند
-      if (res.data.user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard/chat'); // مستقیم بره توی چت
-      }
-
-      // یک رفرش ریز برای آپدیت شدن هدر
-      setTimeout(() => window.location.reload(), 100);
+      // 👇👇 اصلاح مهم: هدایت به داشبورد اصلی (Overview) به جای چت
+      navigate('/dashboard');
 
     } catch (error) {
-      const msg = error.response?.data?.message || 'اطلاعات ورود اشتباه است.';
-      toast.error(msg);
+      console.error(error);
+      toast.error(error.response?.data?.message || 'ایمیل یا رمز عبور اشتباه است.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+    <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
         
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-brand-navy rounded-2xl flex items-center justify-center text-white text-3xl">
-            <FaStethoscope />
-          </div>
+        <div className="text-center">
+          <h2 className="mt-2 text-3xl font-extrabold text-gray-900">ورود به حساب کاربری</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            هنوز ثبت نام نکرده‌اید؟{' '}
+            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500 transition">
+              ساخت حساب جدید
+            </Link>
+          </p>
         </div>
 
-        <h2 className="text-2xl font-bold text-center text-brand-navy mb-2">ورود به حساب کاربری</h2>
-        <p className="text-center text-gray-500 mb-8 text-sm">برای استفاده از دستیار هوشمند وارد شوید</p>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">ایمیل</label>
-            <input 
-              type="email"
-              required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-green focus:ring-2 focus:ring-green-100 outline-none transition"
-              placeholder="example@mail.com"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-gray-700">رمز عبور</label>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="space-y-4">
+            
+            {/* ایمیل */}
+            <div className="relative">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">ایمیل</label>
+              <div className="relative">
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition dir-ltr text-left"
+                  placeholder="example@mail.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+                <FaEnvelope className="absolute left-3 top-3.5 text-gray-400" />
+              </div>
             </div>
-            <input 
-              type="password"
-              required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-green focus:ring-2 focus:ring-green-100 outline-none transition"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-            />
-          </div>
-          <div className="text-center mt-4">
-           <button 
-            type="button"
-            onClick={() => window.location.href = 'mailto:admin@vetai.com?subject=فراموشی رمز عبور&body=لطفا رمز عبور من را ریست کنید.'}
-            className="text-sm text-blue-600 hover:underline"  >    رمز عبور را فراموش کرده‌اید؟ (ارسال تیکت به ادمین)
-           </button>
+
+            {/* رمز عبور */}
+            <div className="relative">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">رمز عبور</label>
+              <div className="relative">
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition dir-ltr text-left"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <FaLock className="absolute left-3 top-3.5 text-gray-400" />
+              </div>
+            </div>
+
           </div>
 
-          <button 
-            type="submit" 
+          <div className="flex items-center justify-end">
+            <div className="text-sm">
+              {/* لینک ساده برای فراموشی رمز که می‌تونی به صفحه اصلی یا ایمیل وصل کنی */}
+              <a href="mailto:admin@vetai.com?subject=فراموشی رمز عبور" className="font-medium text-blue-600 hover:text-blue-500">
+                رمز عبور را فراموش کرده‌اید؟
+              </a>
+            </div>
+          </div>
+
+          <button
+            type="submit"
             disabled={loading}
-            className={`w-full text-white py-3.5 rounded-xl font-bold transition shadow-lg flex justify-center items-center
-              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-brand-navy hover:bg-gray-800 shadow-blue-900/20'}
+            className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white transition-all
+              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-900 hover:bg-blue-800 shadow-lg shadow-blue-900/30'}
             `}
           >
-            {loading ? 'در حال ورود...' : 'ورود به سیستم'}
+            <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+              <FaSignInAlt className={`${loading ? 'hidden' : 'h-5 w-5 text-blue-300 group-hover:text-blue-100'}`} />
+            </span>
+            {loading ? 'در حال ورود...' : 'ورود به پنل'}
           </button>
         </form>
-
-        <div className="mt-8 text-center text-sm text-gray-500">
-          حساب کاربری ندارید؟ 
-          <Link to="/register" className="text-brand-green font-bold mr-1 hover:underline">
-            ثبت نام رایگان
-          </Link>
+        
+        <div className="text-center mt-4 pt-4 border-t border-gray-100">
+            <Link to="/" className="text-sm text-gray-500 hover:text-gray-800 flex items-center justify-center gap-2 transition">
+                <FaArrowLeft size={12} />
+                بازگشت به صفحه اصلی
+            </Link>
         </div>
 
       </div>
