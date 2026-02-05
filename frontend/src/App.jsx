@@ -18,6 +18,7 @@ import Overview from './pages/dashboard/Overview';
 import Chat from './pages/dashboard/Chat';
 import History from './pages/dashboard/History';
 import Profile from './pages/dashboard/Profile';
+import Tickets from './pages/dashboard/Tickets';
 
 // --- صفحات پنل ادمین (اینا رو قبلا ایمپورت نکرده بودی) ---
 import AdminDashboard from './pages/admin/Dashboard';
@@ -41,6 +42,7 @@ const App = () => {
           <Route path="chat" element={<Chat />} />
           <Route path="history" element={<History />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="tickets" element={<Tickets />} />
         </Route>
 
         {/* ۳. پنل ادمین (این بخش مهمیه که نداشتی) */}
