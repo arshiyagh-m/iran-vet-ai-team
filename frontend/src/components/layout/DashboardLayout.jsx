@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FaHome, FaComments, FaHistory, FaUser, FaSignOutAlt, FaBars, FaTimes, FaHeadset, FaBell, FaCircle } from 'react-icons/fa';
-import client from '../api/client';
+import client from '../../api/client';
+
 
 const DashboardLayout = () => {
   const location = useLocation();
