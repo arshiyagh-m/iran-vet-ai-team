@@ -1,100 +1,162 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { FaUserShield, FaKey, FaSave } from 'react-icons/fa';
+import { FaUserEdit, FaSave, FaIdCard, FaBriefcase } from 'react-icons/fa';
+import client from '../../api/client';
 
 const Profile = () => {
-  const [userData, setUserData] = useState({ name: '', email: '' });
-  const [passData, setPassData] = useState({ current: '', new: '', confirm: '' });
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    jobType: 'other' // پیش‌فرض
+  });
 
+  // خواندن اطلاعات اولیه از لوکال استوریج (یا سرور)
   useEffect(() => {
-    // پر کردن اطلاعات پروفایل از حافظه
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
-      setUserData({ 
-        name: parsed.name || 'کاربر', 
-        email: parsed.email || 'ثبت نشده' 
+      setFormData({
+        fullName: parsed.name || '',
+        email: parsed.email || '',
+        phone: parsed.phone || '', // اگر توی لوکال ذخیره نکرده بودیم خالی میذاره
+        jobType: parsed.jobType || 'other'
       });
     }
   }, []);
 
-  const handlePasswordChange = (e) => {
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (passData.new !== passData.confirm) {
-      return toast.error('رمز جدید با تکرار آن مطابقت ندارد!');
+    setLoading(true);
+
+    try {
+      // ارسال درخواست آپدیت به سرور
+      const res = await client.put('/auth/profile', formData);
+
+      // آپدیت کردن لوکال استوریج با اطلاعات جدید
+      const updatedUser = res.data.user;
+      
+      // چون ساختار لوکال استوریج ما {name, role, ...} هست باید مپ کنیم
+      const storageData = {
+        name: updatedUser.name,
+        role: updatedUser.role,
+        tokens: updatedUser.tokens,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        jobType: updatedUser.jobType
+      };
+      
+      localStorage.setItem('user', JSON.stringify(storageData));
+      
+      toast.success('اطلاعات پروفایل با موفقیت بروزرسانی شد ✅');
+      
+      // یک ریلود ریز برای اینکه هدر و سایدبار هم آپدیت بشن
+      setTimeout(() => window.location.reload(), 1000);
+
+    } catch (error) {
+      console.error(error);
+      toast.error('خطا در ذخیره اطلاعات. شاید ایمیل تکراری باشد.');
+    } finally {
+      setLoading(false);
     }
-    // چون هنوز API تغییر رمز نداریم، فعلا نمایشی است
-    toast.success('درخواست تغییر رمز ثبت شد (نسخه دمو) ✅');
-    setPassData({ current: '', new: '', confirm: '' });
   };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       
-      {/* کارت اطلاعات کلی */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 bg-blue-900 rounded-full flex items-center justify-center text-white text-2xl">
-            <FaUserShield />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">اطلاعات حساب کاربری</h2>
-            <p className="text-gray-500">مشاهده اطلاعات شخصی</p>
-          </div>
+      {/* هدر */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 flex items-center gap-4">
+        <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl shadow-lg shadow-blue-200">
+          <FaUserEdit />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">نام و نام خانوادگی</label>
-            <input type="text" value={userData.name} disabled className="w-full px-4 py-3 bg-gray-50 rounded-xl border-none text-gray-700 font-bold" />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">ایمیل / نام کاربری</label>
-            <input type="text" value={userData.email} disabled className="w-full px-4 py-3 bg-gray-50 rounded-xl border-none text-gray-700 font-mono" />
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">ویرایش پروفایل</h2>
+          <p className="text-gray-500">اطلاعات هویتی و شغلی خود را تکمیل کنید</p>
         </div>
       </div>
 
-      {/* کارت امنیت (تغییر رمز) */}
+      {/* فرم ویرایش */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        <div className="flex items-center gap-4 mb-6 border-b border-gray-100 pb-4">
-          <FaKey className="text-yellow-500 text-xl" />
-          <h2 className="text-lg font-bold text-gray-800">تغییر رمز عبور</h2>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* نام و نام خانوادگی */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">نام و نام خانوادگی</label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  className="w-full pl-4 pr-10 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                />
+                <FaIdCard className="absolute left-3 top-3.5 text-gray-400" />
+              </div>
+            </div>
 
-        <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">رمز عبور فعلی</label>
-            <input 
-              type="password" 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 outline-none transition"
-              value={passData.current}
-              onChange={e => setPassData({...passData, current: e.target.value})}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">رمز عبور جدید</label>
-            <input 
-              type="password" 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 outline-none transition"
-              value={passData.new}
-              onChange={e => setPassData({...passData, new: e.target.value})}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">تکرار رمز جدید</label>
-            <input 
-              type="password" 
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 outline-none transition"
-              value={passData.confirm}
-              onChange={e => setPassData({...passData, confirm: e.target.value})}
-            />
+            {/* شماره موبایل */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">شماره موبایل</label>
+              <input 
+                type="tel" 
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition dir-ltr text-left"
+              />
+            </div>
+
+            {/* ایمیل */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">ایمیل</label>
+              <input 
+                type="email" 
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition dir-ltr text-left"
+              />
+            </div>
+
+            {/* انتخاب شغل (جدید) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">حوزه فعالیت (شغل)</label>
+              <div className="relative">
+                <select
+                  name="jobType"
+                  value={formData.jobType}
+                  onChange={handleChange}
+                  className="w-full pl-4 pr-10 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition appearance-none bg-white"
+                >
+                  <option value="student">🎓 دانشجوی دامپزشکی</option>
+                  <option value="vet">🩺 دامپزشک</option>
+                  <option value="owner">🐄 دامدار / پرورش‌دهنده</option>
+                  <option value="other">👤 سایر علاقه مندان</option>
+                </select>
+                <FaBriefcase className="absolute left-3 top-3.5 text-gray-400" />
+              </div>
+            </div>
           </div>
 
-          <button type="submit" className="flex items-center gap-2 bg-green-600 text-white px-6 py-2.5 rounded-xl hover:bg-green-700 transition shadow-lg shadow-green-200">
-            <FaSave />
-            ذخیره تغییرات
-          </button>
+          <div className="border-t border-gray-100 pt-6 flex justify-end">
+            <button 
+              type="submit" 
+              disabled={loading}
+              className={`flex items-center gap-2 px-8 py-3 rounded-xl text-white font-bold shadow-lg transition
+                ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'}
+              `}
+            >
+              <FaSave />
+              {loading ? 'در حال ذخیره...' : 'ذخیره تغییرات'}
+            </button>
+          </div>
+
         </form>
       </div>
 
