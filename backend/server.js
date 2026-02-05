@@ -11,6 +11,7 @@ const KnowledgeBase = require('./models/KnowledgeBase');
 const ChatLog = require('./models/ChatLog');
 const adminRoutes = require('./routes/adminRoutes');
 const Ticket = require('./models/Ticket'); 
+const Notification = require('./models/Notification');
 
 const app = express();
 const PORT = process.env.PORT || 3000; 
@@ -23,7 +24,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, 
 });
 
-// --- ۱. اتصال به دیتابیس (با لاگ دقیق) ---
+// --- ۱. اتصال به دیتابیس ---
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB Successfully');
@@ -32,18 +33,14 @@ mongoose.connect(process.env.MONGO_URI)
     console.error('❌ MongoDB Connection Error:', err.message);
   });
 
-// --- ۲. روت‌های تست (اصلاح شده برای حل مشکل دکمه تست) ---
-
-// الف: وقتی آدرس سایت رو توی مرورگر میزنی
+// --- ۲. روت‌های تست و سلامت سرور ---
 app.get('/', (req, res) => {
     res.send('<h1>✅ Server is Running Successfully!</h1><p>Iran Vet AI Backend</p>');
 });
 
-// ب: وقتی دکمه "تست اتصال" رو توی فرانت‌اند میزنی (این همون تیکه گمشده بود!)
 app.get('/api', (req, res) => {
     res.status(200).json({ message: '✅ ارتباط با سرور برقرار است (API Ready)' });
 });
-
 
 // --- ۳. میدل‌ور احراز هویت ---
 const authenticateToken = (req, res, next) => {
@@ -66,38 +63,41 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { fullName, email, phone, password } = req.body;
 
-    // الف: چک کردن فیلدها
     if (!fullName || !email || !phone || !password) {
       return res.status(400).json({ message: 'لطفاً تمام فیلدها را پر کنید.' });
     }
 
-    // ب: چک کردن ایمیل تکراری
     const existingEmail = await User.findOne({ email });
     if (existingEmail) {
-      console.log("⛔ تکراری: ایمیل " + email);
       return res.status(400).json({ message: 'این ایمیل قبلاً ثبت شده است.' });
     }
 
-    // ج: چک کردن موبایل تکراری
     const existingPhone = await User.findOne({ phone });
     if (existingPhone) {
-      console.log("⛔ تکراری: موبایل " + phone);
       return res.status(400).json({ message: 'این شماره موبایل قبلاً ثبت شده است.' });
     }
 
-    // د: ساخت کاربر
     const newUser = new User({
       fullName,
       email,
       phone,
       password, 
       role: 'user',
-      tokens: 5
+      tokens: 5,
+      mustChangePassword: false
     });
 
     await newUser.save();
-    console.log("✅ کاربر جدید ساخته شد:", email);
     
+    // ارسال نوتیفیکیشن خوش‌آمدگویی
+    await Notification.create({
+      user: newUser._id,
+      title: 'خوش آمدید! 🎉',
+      message: 'حساب کاربری شما با موفقیت ساخته شد. از بخش چت هوشمند استفاده کنید.',
+      link: '/dashboard/profile'
+    });
+
+    console.log("✅ کاربر جدید ساخته شد:", email);
     res.status(201).json({ message: 'ثبت نام با موفقیت انجام شد' });
 
   } catch (error) {
@@ -109,6 +109,7 @@ app.post('/api/auth/register', async (req, res) => {
 // ✅ لاگین
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
+  const userAgent = req.headers['user-agent'] || 'دستگاه ناشناس';
   
   try {
     const user = await User.findOne({ email, password });
@@ -118,13 +119,24 @@ app.post('/api/auth/login', async (req, res) => {
       
       const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET);
       
+      // ثبت نوتیفیکیشن ورود
+      const loginTime = new Date().toLocaleString('fa-IR');
+      await Notification.create({
+        user: user._id,
+        title: 'هشدار امنیتی: ورود به حساب',
+        message: `ورود موفق در تاریخ ${loginTime} با دستگاه: ${userAgent}`,
+        link: '/dashboard/profile'
+      });
+
       console.log("✅ ورود موفق:", email);
       res.json({ 
         token, 
         user: { 
           name: user.fullName, 
           role: user.role, 
-          tokens: user.tokens 
+          tokens: user.tokens,
+          jobType: user.jobType,
+          mustChangePassword: user.mustChangePassword
         } 
       });
     } else {
@@ -137,18 +149,45 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// ✅ روت جدید: ویرایش پروفایل کاربر
+// ✅ تغییر رمز عبور
+app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (user.password !== currentPassword) {
+      return res.status(400).json({ message: 'رمز عبور فعلی اشتباه است' });
+    }
+
+    user.password = newPassword;
+    user.mustChangePassword = false; // غیرفعال کردن اجبار تغییر رمز
+    await user.save();
+
+    // نوتیفیکیشن تغییر رمز
+    await Notification.create({
+      user: user._id,
+      title: 'تغییر رمز عبور',
+      message: 'رمز عبور شما با موفقیت تغییر کرد.',
+      isRead: false
+    });
+
+    res.json({ message: 'رمز عبور با موفقیت تغییر کرد' });
+  } catch (error) {
+    res.status(500).json({ message: 'خطا در تغییر رمز' });
+  }
+});
+
+// ✅ ویرایش پروفایل
 app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
     const { fullName, email, phone, jobType } = req.body;
     const userId = req.user.id;
 
-    // پیدا کردن و آپدیت کردن کاربر
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { fullName, email, phone, jobType },
-      { new: true } // این گزینه میگه نسخه آپدیت شده رو برگردون
-    ).select('-password'); // رمز عبور رو برنگردون
+      { new: true } 
+    ).select('-password');
 
     if (!updatedUser) {
       return res.status(404).json({ message: 'کاربر یافت نشد' });
@@ -240,9 +279,9 @@ app.post('/api/chat/message', authenticateToken, async (req, res) => {
   }
 });
 
-// --- ۷. سیستم تیکت پشتیبانی ---
+// --- ۷. سیستم تیکت پشتیبانی (چت) ---
 
-// ارسال تیکت جدید
+// ثبت تیکت جدید
 app.post('/api/tickets', authenticateToken, async (req, res) => {
   try {
     const { subject, message } = req.body;
@@ -254,8 +293,8 @@ app.post('/api/tickets', authenticateToken, async (req, res) => {
     const newTicket = new Ticket({
       user: req.user.id,
       subject,
-      message,
-      status: 'open'
+      status: 'open',
+      messages: [{ sender: 'user', text: message }]
     });
 
     await newTicket.save();
@@ -269,7 +308,6 @@ app.post('/api/tickets', authenticateToken, async (req, res) => {
 // دریافت لیست تیکت‌های کاربر
 app.get('/api/tickets', authenticateToken, async (req, res) => {
   try {
-    // تیکت‌های خود کاربر رو پیدا کن و بر اساس تاریخ (جدیدترین اول) مرتب کن
     const tickets = await Ticket.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(tickets);
   } catch (error) {
@@ -277,8 +315,71 @@ app.get('/api/tickets', authenticateToken, async (req, res) => {
   }
 });
 
+// دریافت جزئیات یک تیکت
+app.get('/api/tickets/:id', authenticateToken, async (req, res) => {
+  try {
+    const ticket = await Ticket.findById(req.params.id);
+    if (!ticket) return res.status(404).json({ message: 'تیکت یافت نشد' });
 
-// استارت
+    // فقط کاربر صاحب تیکت یا ادمین می‌تونن ببینن
+    if (ticket.user.toString() !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'دسترسی غیرمجاز' });
+    }
+    res.json(ticket);
+  } catch (error) {
+    res.status(500).json({ message: 'خطا' });
+  }
+});
+
+// پاسخ دادن به تیکت (Reply)
+app.post('/api/tickets/:id/reply', authenticateToken, async (req, res) => {
+  try {
+    const { text } = req.body;
+    const ticket = await Ticket.findById(req.params.id);
+    const senderRole = req.user.role === 'admin' ? 'admin' : 'user';
+
+    ticket.messages.push({ sender: senderRole, text });
+    
+    // اگر ادمین پاسخ داد، به کاربر نوتیفیکیشن بده
+    if (senderRole === 'admin') {
+        ticket.status = 'pending'; // در انتظار مشاهده کاربر
+        
+        await Notification.create({
+            user: ticket.user,
+            title: 'پاسخ جدید پشتیبانی',
+            message: `به تیکت "${ticket.subject}" پاسخ داده شد.`,
+            link: `/dashboard/tickets/${ticket._id}`
+        });
+    } else {
+        ticket.status = 'open'; // کاربر پاسخ داده، باز شود
+    }
+
+    await ticket.save();
+    res.json({ message: 'پاسخ ارسال شد', ticket });
+  } catch (error) {
+    res.status(500).json({ message: 'خطا' });
+  }
+});
+
+// --- ۸. مدیریت نوتیفیکیشن‌ها ---
+
+// دریافت لیست
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+  try {
+    const notifs = await Notification.find({ user: req.user.id }).sort({ createdAt: -1 });
+    res.json(notifs);
+  } catch (error) { res.status(500).json({ message: 'Error' }); }
+});
+
+// خواندن نوتیفیکیشن
+app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
+  try {
+    await Notification.findByIdAndUpdate(req.params.id, { isRead: true });
+    res.json({ success: true });
+  } catch (error) { res.status(500).json({ message: 'Error' }); }
+});
+
+// استارت سرور
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
