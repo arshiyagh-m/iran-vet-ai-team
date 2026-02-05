@@ -83,6 +83,13 @@ const Login = () => {
               onChange={(e) => setFormData({...formData, password: e.target.value})}
             />
           </div>
+          <div className="text-center mt-4">
+           <button 
+            type="button"
+            onClick={() => window.location.href = 'mailto:admin@vetai.com?subject=فراموشی رمز عبور&body=لطفا رمز عبور من را ریست کنید.'}
+            className="text-sm text-blue-600 hover:underline"  >    رمز عبور را فراموش کرده‌اید؟ (ارسال تیکت به ادمین)
+           </button>
+          </div>
 
           <button 
             type="submit" 
