@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { FaHome, FaComments, FaHistory, FaUser, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
+import { FaHeadset } from 'react-icons/fa'; 
 
 const DashboardLayout = () => {
   const location = useLocation();
@@ -30,6 +31,7 @@ const DashboardLayout = () => {
     { icon: <FaComments />, label: 'شروع گفتگو', path: '/dashboard/chat' },
     { icon: <FaHistory />, label: 'تاریخچه', path: '/dashboard/history' },
     { icon: <FaUser />, label: 'پروفایل من', path: '/dashboard/profile' },
+    { icon: <FaHeadset />, label: 'پشتیبانی', path: '/dashboard/tickets' },
   ];
 
   // تشخیص اینکه آیا لینک فعال است یا نه (برای هایلایت کردن)
