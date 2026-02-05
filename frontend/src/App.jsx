@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -15,7 +15,6 @@ import Register from './pages/auth/Register';
 
 // --- صفحات پنل کاربری ---
 import Overview from './pages/dashboard/Overview';
-// import Chat from './pages/dashboard/Chat';  <--- حذف شد چون گفتی چت رو برداریم
 import History from './pages/dashboard/History';
 import Profile from './pages/dashboard/Profile';
 import Tickets from './pages/dashboard/Tickets';
@@ -36,9 +35,8 @@ const App = () => {
 
         {/* ۲. پنل کاربری */}
         <Route path="/dashboard" element={<DashboardLayout />}>
+          {/* 👇 این خط یعنی صفحه اصلی داشبورد همان Overview است */}
           <Route index element={<Overview />} />
-          
-          {/* <Route path="chat" element={<Chat />} /> <--- حذف شد */}
           
           <Route path="history" element={<History />} />
           <Route path="profile" element={<Profile />} />
