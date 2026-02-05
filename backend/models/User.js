@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
 
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     tokens: { type: Number, default: 5 },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
 
     mustChangePassword: { type: Boolean, default: false },
 
