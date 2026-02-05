@@ -16,6 +16,13 @@ const userSchema = new mongoose.Schema({
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     tokens: { type: Number, default: 5 },
     createdAt: { type: Date, default: Date.now }
+
+    mustChangePassword: { type: Boolean, default: false },
+
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    tokens: { type: Number, default: 5 },
+    createdAt: { type: Date, default: Date.now }
 });
+
 
 module.exports = mongoose.model('User', userSchema);
