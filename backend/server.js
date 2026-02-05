@@ -10,6 +10,7 @@ const User = require('./models/User');
 const KnowledgeBase = require('./models/KnowledgeBase');
 const ChatLog = require('./models/ChatLog');
 const adminRoutes = require('./routes/adminRoutes');
+const Ticket = require('./models/Ticket'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000; 
@@ -203,6 +204,44 @@ app.post('/api/chat/message', authenticateToken, async (req, res) => {
     });
   }
 });
+
+// --- ۷. سیستم تیکت پشتیبانی ---
+
+// ارسال تیکت جدید
+app.post('/api/tickets', authenticateToken, async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+    
+    if (!subject || !message) {
+      return res.status(400).json({ message: 'موضوع و متن پیام الزامی است.' });
+    }
+
+    const newTicket = new Ticket({
+      user: req.user.id,
+      subject,
+      message,
+      status: 'open'
+    });
+
+    await newTicket.save();
+    res.status(201).json({ message: 'تیکت شما با موفقیت ثبت شد.' });
+
+  } catch (error) {
+    res.status(500).json({ message: 'خطا در ثبت تیکت' });
+  }
+});
+
+// دریافت لیست تیکت‌های کاربر
+app.get('/api/tickets', authenticateToken, async (req, res) => {
+  try {
+    // تیکت‌های خود کاربر رو پیدا کن و بر اساس تاریخ (جدیدترین اول) مرتب کن
+    const tickets = await Ticket.find({ user: req.user.id }).sort({ createdAt: -1 });
+    res.json(tickets);
+  } catch (error) {
+    res.status(500).json({ message: 'خطا در دریافت تیکت‌ها' });
+  }
+});
+
 
 // استارت
 app.listen(PORT, () => {
