@@ -1,63 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { FaHome, FaComments, FaHistory, FaUser, FaSignOutAlt, FaBars, FaTimes, FaHeadset, FaBell, FaCircle } from 'react-icons/fa';
-
-// 👇 اصلاح مهم ۱: آدرس ایمپورت (دو نقطه بیشتر گذاشتم که اگر تو پوشه فرعی بودی پیدا کنه)
+import { FaHome, FaHistory, FaUser, FaSignOutAlt, FaBars, FaTimes, FaHeadset, FaBell, FaCircle } from 'react-icons/fa';
+// آیکون FaComments را پاک کردم چون دیگه چت نداریم
 import client from '../../api/client';
 
 const DashboardLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // مقدار اولیه امن (که اگر دیتا نبود صفحه سفید نشه)
   const [user, setUser] = useState({ name: 'کاربر', role: 'user' });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifBox, setShowNotifBox] = useState(false);
 
   useEffect(() => {
-    // ۱. خواندن امن اطلاعات کاربر
-    const fetchUserData = async () => {
+    const loadUser = () => {
       try {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          // فقط اگر دیتا سالم بود آپدیت کن
-          if (parsedUser && parsedUser.name) {
-            setUser(parsedUser);
-            // چک کردن تغییر رمز
-            if (parsedUser.mustChangePassword && location.pathname !== '/dashboard/change-password') {
+          const parsed = JSON.parse(storedUser);
+          if (parsed && parsed.name) {
+            setUser(parsed);
+            if (parsed.mustChangePassword && location.pathname !== '/dashboard/change-password') {
               navigate('/dashboard/change-password');
             }
           }
         }
-      } catch (e) {
-        console.error("Error parsing user data", e);
+      } catch (err) {
+        localStorage.removeItem('user');
       }
     };
 
-    // ۲. خواندن نوتیفیکیشن‌ها (با try/catch که اگر ارور داد کل برنامه نپره)
-    const fetchNotifications = async () => {
+    const loadNotifs = async () => {
       try {
         const res = await client.get('/notifications');
-        if (res.data) {
-          setNotifications(res.data);
-        }
-      } catch (error) {
-        console.log("هنوز به سرور وصل نیست یا توکن منقضی شده");
-      }
+        if (res.data) setNotifications(res.data);
+      } catch (err) { console.log("Notif Error"); }
     };
 
-    fetchUserData();
-    fetchNotifications();
-
-    const interval = setInterval(fetchNotifications, 30000);
+    loadUser();
+    loadNotifs();
+    const interval = setInterval(loadNotifs, 30000);
     return () => clearInterval(interval);
-
   }, [location, navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.clear();
     navigate('/login');
   };
 
@@ -66,15 +53,16 @@ const DashboardLayout = () => {
       try {
         await client.put(`/notifications/${notif._id}/read`);
         setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n));
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     }
     setShowNotifBox(false);
     if (notif.link) navigate(notif.link);
   };
 
+  // 👇 لیست منو اصلاح شد (چت حذف شد)
   const menuItems = [
     { icon: <FaHome />, label: 'پیشخوان', path: '/dashboard' },
-    { icon: <FaComments />, label: 'شروع گفتگو', path: '/dashboard/chat' },
+    // { icon: <FaComments />, label: 'شروع گفتگو', path: '/dashboard/chat' }, <--- حذف شد
     { icon: <FaHistory />, label: 'تاریخچه', path: '/dashboard/history' },
     { icon: <FaUser />, label: 'پروفایل من', path: '/dashboard/profile' },
     { icon: <FaHeadset />, label: 'پشتیبانی', path: '/dashboard/tickets' },
@@ -85,29 +73,23 @@ const DashboardLayout = () => {
     return location.pathname.startsWith(path);
   };
 
+  const getInitial = (name) => name ? name.charAt(0) : 'U';
   const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  // تابع کمکی برای گرفتن حرف اول اسم (ضد کرش)
-  const getFirstChar = (name) => {
-    return name ? name.charAt(0) : 'U';
-  };
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden dir-rtl font-sans">
       
-      {/* سایدبار */}
       <aside className={`
         fixed md:static inset-y-0 right-0 z-50 w-64 bg-slate-900 text-white shadow-2xl transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
       `}>
         <div className="h-20 flex items-center gap-3 px-6 border-b border-gray-700 bg-slate-800">
           <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-            {/* 👇 اینجا رو امن کردم */}
-            {getFirstChar(user.name)}
+            {getInitial(user.name)}
           </div>
           <div className="overflow-hidden">
             <h2 className="text-sm font-bold truncate">{user.name}</h2>
-            <p className="text-xs text-gray-400 capitalize">{user.role === 'admin' ? 'مدیر سیستم' : 'کاربر عادی'}</p>
+            <p className="text-xs text-gray-400 capitalize">{user.role === 'admin' ? 'مدیر' : 'کاربر'}</p>
           </div>
           <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden mr-auto text-gray-400 hover:text-white">
             <FaTimes size={20} />
@@ -143,11 +125,8 @@ const DashboardLayout = () => {
         <div onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"></div>
       )}
 
-      {/* محتوای اصلی */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
-        
         <header className="h-16 bg-white shadow-sm flex items-center justify-between px-4 z-30 relative">
-          
           <div className="flex items-center gap-3 md:hidden">
             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-slate-600 hover:bg-gray-100 rounded-lg">
               <FaBars size={24} />
@@ -161,12 +140,8 @@ const DashboardLayout = () => {
               className="relative p-2 text-gray-600 hover:text-blue-600 transition rounded-full hover:bg-gray-100"
             >
               <FaBell size={24} />
-              {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
-              )}
-              {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-              )}
+              {unreadCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>}
+              {unreadCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>}
             </button>
 
             {showNotifBox && (
@@ -180,20 +155,11 @@ const DashboardLayout = () => {
                     <p className="p-8 text-center text-gray-400 text-sm">هیچ اعلان جدیدی ندارید.</p>
                   ) : (
                     notifications.map(n => (
-                      <div 
-                        key={n._id} 
-                        onClick={() => handleReadNotif(n)}
-                        className={`p-3 border-b hover:bg-gray-50 cursor-pointer transition flex gap-3 ${n.isRead ? 'bg-white opacity-70' : 'bg-blue-50/50'}`}
-                      >
-                        <div className="mt-1">
-                          {!n.isRead ? <FaCircle size={8} className="text-blue-500" /> : <FaCircle size={8} className="text-gray-300" />}
-                        </div>
+                      <div key={n._id} onClick={() => handleReadNotif(n)} className={`p-3 border-b hover:bg-gray-50 cursor-pointer transition flex gap-3 ${n.isRead ? 'bg-white opacity-70' : 'bg-blue-50/50'}`}>
+                        <div className="mt-1">{!n.isRead ? <FaCircle size={8} className="text-blue-500" /> : <FaCircle size={8} className="text-gray-300" />}</div>
                         <div>
                           <span className={`text-sm block mb-1 ${!n.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-600'}`}>{n.title}</span>
                           <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{n.message}</p>
-                          <span className="text-[10px] text-gray-400 mt-2 block text-left dir-ltr">
-                            {new Date(n.createdAt).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'})}
-                          </span>
                         </div>
                       </div>
                     ))
@@ -204,23 +170,19 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        {/* هدر دسکتاپ (نوتیفیکیشن) */}
+        {/* هدر دسکتاپ */}
         <div className="hidden md:flex absolute top-4 left-8 z-50">
-            <div className="relative">
+           {/* همان کد دکمه نوتیفیکیشن بالا */}
+             <div className="relative">
                 <button 
                   onClick={() => setShowNotifBox(!showNotifBox)} 
                   className="relative p-2 text-gray-600 hover:text-blue-600 transition rounded-full hover:bg-gray-100 bg-white shadow-sm"
                 >
                   <FaBell size={24} />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
-                  )}
-                  {unreadCount > 0 && (
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-                  )}
+                  {unreadCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>}
+                  {unreadCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>}
                 </button>
-
-                {showNotifBox && (
+                 {showNotifBox && (
                   <div className="absolute top-12 left-0 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-50 dir-rtl text-right">
                     <div className="p-3 border-b bg-gray-50 font-bold text-gray-700 flex justify-between items-center">
                       <span>اعلان‌ها</span>
@@ -231,20 +193,11 @@ const DashboardLayout = () => {
                         <p className="p-8 text-center text-gray-400 text-sm">هیچ اعلان جدیدی ندارید.</p>
                       ) : (
                         notifications.map(n => (
-                          <div 
-                            key={n._id} 
-                            onClick={() => handleReadNotif(n)}
-                            className={`p-3 border-b hover:bg-gray-50 cursor-pointer transition flex gap-3 ${n.isRead ? 'bg-white opacity-70' : 'bg-blue-50/50'}`}
-                          >
-                            <div className="mt-1">
-                              {!n.isRead ? <FaCircle size={8} className="text-blue-500" /> : <FaCircle size={8} className="text-gray-300" />}
-                            </div>
+                          <div key={n._id} onClick={() => handleReadNotif(n)} className={`p-3 border-b hover:bg-gray-50 cursor-pointer transition flex gap-3 ${n.isRead ? 'bg-white opacity-70' : 'bg-blue-50/50'}`}>
+                            <div className="mt-1">{!n.isRead ? <FaCircle size={8} className="text-blue-500" /> : <FaCircle size={8} className="text-gray-300" />}</div>
                             <div>
                               <span className={`text-sm block mb-1 ${!n.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-600'}`}>{n.title}</span>
                               <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{n.message}</p>
-                              <span className="text-[10px] text-gray-400 mt-2 block text-left dir-ltr">
-                                {new Date(n.createdAt).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'})}
-                              </span>
                             </div>
                           </div>
                         ))
@@ -252,14 +205,13 @@ const DashboardLayout = () => {
                     </div>
                   </div>
                 )}
-              </div>
+             </div>
         </div>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
           <Outlet />
         </main>
       </div>
-
     </div>
   );
 };
