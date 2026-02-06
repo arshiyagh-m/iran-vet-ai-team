@@ -115,30 +115,29 @@ const BotChat = () => {
     setMessages(prev => [...prev, { role: 'user', text: userText }]);
     setLoading(true);
 
-    try {
-      // ۲. ارسال درخواست به سرور
+  try {
+      // ارسال درخواست به سرور
       const res = await client.post('/chat', {
         message: userText,
-        botType: type // نوع بات (مثلاً 'bee') را به بک‌اند می‌فرستیم
+        botType: type 
       });
 
-      // ۳. اضافه کردن جواب ربات
+      // الف: نمایش جواب ربات
       setMessages(prev => [...prev, { role: 'bot', text: res.data.response }]);
 
-    } catch (error) {
-      console.error("Chat Error:", error);
-      
-      // مدیریت خطای تمام شدن توکن
-      let errorMsg = 'خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.';
-      if (error.response && error.response.status === 403) {
-        errorMsg = 'اعتبار توکن شما تمام شده است. لطفاً حساب خود را شارژ کنید.';
+      // ب: 👇👇 آپدیت فوری توکن در مرورگر (مشکل کم نشدن توکن حل شد)
+      if (res.data.remainingTokens !== undefined) {
+        const currentUser = JSON.parse(localStorage.getItem('user'));
+        const updatedUser = { ...currentUser, tokens: res.data.remainingTokens };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // این خط باعث میشه هدر سایت بفهمه توکن عوض شده
+        window.dispatchEvent(new Event("storage"));
       }
 
-      setMessages(prev => [...prev, { role: 'bot', text: errorMsg, isError: true }]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    } catch (error) {
+       // ... (بقیه کد خطا مثل قبل)
+
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] bg-white rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
