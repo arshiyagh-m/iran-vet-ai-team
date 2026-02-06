@@ -1,39 +1,34 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-// 👇 اصلاح: FaHeadset را اینجا اضافه کردم و FaStethoscope و بقیه را مرتب کردم
-import { FaArrowLeft, FaDog, FaCat, FaStethoscope, FaUserMd, FaLaptopCode, FaChartLine, FaRobot, FaHeadset } from 'react-icons/fa';
+import { FaArrowLeft, FaDog, FaCat, FaStethoscope, FaUserMd, FaLaptopCode, FaChartLine, FaRobot, FaHeadset, FaCrown, FaCode } from 'react-icons/fa';
 
 const Home = () => {
-  // دیتای تیم
+  // دیتای تیم با تغییرات جدید
   const teamMembers = [
     {
       id: 1,
-      name: 'ارشیا قنبری',
-      role: 'بنیان‌گذار و مدیر فنی',
-      desc: 'متخصص هوش مصنوعی و توسعه‌دهنده ارشد سیستم‌های دامپزشکی.',
-      icon: <FaLaptopCode />
+      name: 'ارشیا قنبری میاندوآب',
+      role: 'بنیان‌گذار و مدیرعامل',
+      desc: 'خالق چشم‌انداز Iran Vet AI و راهبر استراتژیک توسعه هوش مصنوعی.',
+      icon: <FaCrown />, // تاج برای مدیر
+      isBoss: true // نشانگر مخصوص
     },
     {
       id: 2,
-      name: 'دکتر محمدی',
+      name: 'امین پاشایی حلبی',
       role: 'مشاور ارشد دامپزشکی',
-      desc: 'متخصص بیماری‌های داخلی دام با ۱۵ سال سابقه فعالیت.',
-      icon: <FaUserMd />
+      desc: 'متخصص طب داخلی دام‌های بزرگ و ناظر علمی الگوریتم‌های تشخیصی.',
+      icon: <FaUserMd />,
+      isBoss: false
     },
     {
       id: 3,
-      name: 'مهندس رضایی',
-      role: 'مدیر محصول',
-      desc: 'تحلیلگر داده و طراح تجربه کاربری پلتفرم‌های پزشکی.',
-      icon: <FaChartLine />
+      name: 'تیم نکسوس دیزاین',
+      role: 'تیم فنی و توسعه',
+      desc: 'طراحی رابط کاربری، تجربه کاربری و پیاده‌سازی زیرساخت‌های نرم‌افزاری.',
+      icon: <FaCode />,
+      isBoss: false
     },
-    {
-      id: 4,
-      name: 'سارا احمدی',
-      role: 'پشتیبانی فنی',
-      desc: 'مسئول ارتباط با مشتریان و حل مشکلات فنی کاربران.',
-      icon: <FaHeadset /> // 👈 الان این از ایمپورت بالا خوانده می‌شود و خطا نمی‌دهد
-    }
   ];
 
   const popularBots = [
@@ -72,50 +67,39 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ۲. بخش توضیحات */}
+      {/* ۲. بخش اعضای تیم (با طراحی ویژه برای مدیر) */}
       <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-3xl font-bold text-slate-800 mb-4">چرا Iran Vet AI؟</h2>
-            <p className="text-gray-500">
-              سیستم ما فراتر از یک چت‌بات ساده است. این یک اکوسیستم کامل پزشکی است که با تحلیل هزاران پرونده پزشکی، بهترین راهکار را به شما پیشنهاد می‌دهد.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
-              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-6"><FaStethoscope /></div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">دقت بالای تشخیص</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">استفاده از الگوریتم‌های پیشرفته برای کاهش خطای انسانی در تشخیص اولیه بیماری‌ها.</p>
-            </div>
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
-              <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center text-2xl mb-6"><FaRobot /></div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">پاسخگویی ۲۴ ساعته</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">ربات‌های ما هرگز نمی‌خوابند و در هر ساعت از شبانه روز آماده پاسخگویی به سوالات شما هستند.</p>
-            </div>
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition">
-              <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-2xl mb-6"><FaChartLine /></div>
-              <h3 className="text-xl font-bold text-slate-800 mb-3">مدیریت گله و فارم</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">ابزارهای اختصاصی برای دامداران جهت پایش سلامت گله و افزایش بهره‌وری تولید.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ۳. بخش اعضای تیم */}
-      <section className="py-20 bg-white">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl font-bold text-slate-800 mb-12 text-center">تیم متخصص ما</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="flex flex-wrap justify-center gap-8">
             {teamMembers.map((member) => (
-              <div key={member.id} className="bg-slate-50 p-6 rounded-3xl border border-slate-100 hover:border-blue-200 hover:bg-white hover:shadow-lg transition group">
-                <div className="w-16 h-16 bg-white border-2 border-slate-200 rounded-full flex items-center justify-center text-2xl text-slate-400 mb-4 group-hover:border-blue-500 group-hover:text-blue-500 transition">
+              <div 
+                key={member.id} 
+                className={`
+                  relative p-8 rounded-3xl transition-all duration-300 group flex flex-col items-center text-center
+                  ${member.isBoss 
+                    ? 'bg-slate-900 text-white shadow-2xl scale-105 border-2 border-yellow-500/50 w-full md:w-1/3 z-10' 
+                    : 'bg-white text-gray-800 border border-gray-100 hover:shadow-xl hover:-translate-y-2 w-full md:w-1/4'
+                  }
+                `}
+              >
+                {member.isBoss && (
+                  <div className="absolute -top-5 bg-yellow-500 text-slate-900 px-4 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                    <FaCrown /> Founder
+                  </div>
+                )}
+
+                <div className={`
+                  w-20 h-20 rounded-full flex items-center justify-center text-3xl mb-6 shadow-lg
+                  ${member.isBoss ? 'bg-gradient-to-tr from-yellow-400 to-yellow-600 text-slate-900' : 'bg-slate-100 text-slate-500 group-hover:bg-blue-50 group-hover:text-blue-600'}
+                `}>
                   {member.icon}
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 mb-1">{member.name}</h3>
-                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3 block">{member.role}</span>
-                <p className="text-gray-500 text-sm leading-relaxed">
+                
+                <h3 className={`text-xl font-bold mb-2 ${member.isBoss ? 'text-white' : 'text-slate-800'}`}>{member.name}</h3>
+                <span className={`text-xs font-bold uppercase tracking-wider mb-4 block ${member.isBoss ? 'text-yellow-400' : 'text-blue-600'}`}>{member.role}</span>
+                <p className={`text-sm leading-relaxed ${member.isBoss ? 'text-slate-300' : 'text-gray-500'}`}>
                   {member.desc}
                 </p>
               </div>
@@ -124,29 +108,28 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ۴. ربات‌های محبوب */}
-      <section className="py-20 bg-slate-900 text-white">
+      {/* ۳. ربات‌های محبوب */}
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-6">
           <div className="flex justify-between items-end mb-12">
             <div>
-              <h2 className="text-3xl font-bold mb-2">ربات‌های پرطرفدار</h2>
-              <p className="text-slate-400">ابزارهایی که بیشترین استفاده را توسط کاربران داشته‌اند</p>
+              <h2 className="text-3xl font-bold mb-2 text-slate-800">ربات‌های پرطرفدار</h2>
+              <p className="text-gray-500">ابزارهایی که بیشترین استفاده را توسط کاربران داشته‌اند</p>
             </div>
-            <Link to="/bots" className="hidden md:flex items-center gap-2 text-blue-400 hover:text-blue-300 font-bold transition">
+            <Link to="/bots" className="hidden md:flex items-center gap-2 text-blue-600 hover:text-blue-500 font-bold transition">
               مشاهده همه ربات‌ها <FaArrowLeft />
             </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {popularBots.map((bot) => (
-              <div key={bot.id} className="bg-slate-800 p-6 rounded-2xl border border-slate-700 hover:bg-slate-700 transition">
-                <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-2xl text-blue-400 mb-4 shadow-inner">
+              <div key={bot.id} className="bg-slate-50 p-6 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-lg transition group">
+                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl text-blue-500 mb-4 shadow-sm group-hover:scale-110 transition">
                   {bot.icon}
                 </div>
-                <h3 className="font-bold text-lg mb-2">{bot.name}</h3>
-                <p className="text-slate-400 text-sm mb-4">{bot.desc}</p>
-                {/* هدایت به تیکت‌ها چون چت حذف شد */}
-                <Link to="/dashboard/tickets" className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                <h3 className="font-bold text-lg mb-2 text-slate-800">{bot.name}</h3>
+                <p className="text-gray-500 text-sm mb-4">{bot.desc}</p>
+                <Link to="/dashboard/tickets" className="text-sm font-bold text-blue-500 hover:text-blue-600 flex items-center gap-1">
                   شروع مشاوره <FaArrowLeft size={12} />
                 </Link>
               </div>
@@ -154,7 +137,7 @@ const Home = () => {
           </div>
           
            <div className="mt-8 text-center md:hidden">
-            <Link to="/bots" className="inline-flex items-center gap-2 text-blue-400 font-bold">
+            <Link to="/bots" className="inline-flex items-center gap-2 text-blue-600 font-bold">
               مشاهده همه ربات‌ها <FaArrowLeft />
             </Link>
           </div>
