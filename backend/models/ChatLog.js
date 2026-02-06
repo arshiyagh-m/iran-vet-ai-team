@@ -1,20 +1,31 @@
 const mongoose = require('mongoose');
 
 const chatLogSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // کاربر سوال کننده
+    // کاربری که سوال پرسیده (ارتباط با کالکشن User)
+    user: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'User', 
+        required: true 
+    }, 
     
-    botType: { type: String, default: 'General' }, // نوع بات (دام، طیور و...)
+    // نوع بات (مثلاً: bee, dog, cat یا poultry-industrial)
+    botType: { type: String, default: 'General' }, 
     
-    question: { type: String, required: true }, // سوال کاربر
+    // سوال کاربر
+    question: { type: String, required: true }, 
     
-    answer: { type: String, required: true }, // جواب هوش مصنوعی
+    // جواب تولید شده توسط هوش مصنوعی
+    answer: { type: String, required: true }, 
     
-    reference: { type: String }, // منبع جواب (مثلاً: دیتابیس نسخه ۴ - فایل X) <-- این مهم بود
+    // اگر از دیتابیس خودمان خوانده باشد، اینجا منبع ذکر می‌شود (مثلاً: فایل تغذیه.pdf)
+    reference: { type: String, default: null }, 
     
-    licenseUsed: { type: String }, // کد لایسنس استفاده شده (اختیاری)
+    // کد لایسنسی که هزینه از آن کسر شده
+    licenseUsed: { type: String }, 
     
-    // اگر true باشد یعنی در دیتابیس اکسل چیزی نبوده و هوش مصنوعی از دانش خودش (OpenAI) جواب داده
-    // این برای ادمین عالیه تا بفهمه کجاها دیتابیسش ناقصه
+    // این فیلد خیلی مهم است:
+    // true = دیتابیس ما جوابی نداشت و هوش مصنوعی از خودش گفت (باید بررسی شود)
+    // false = جواب مستند به دیتابیس ماست
     isFallbackResponse: { type: Boolean, default: false }, 
     
     timestamp: { type: Date, default: Date.now }
