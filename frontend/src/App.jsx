@@ -11,7 +11,8 @@ import DashboardLayout from './components/layout/DashboardLayout';
 // --- صفحات عمومی ---
 import Home from './pages/public/Home';
 import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
+// import Register from './pages/auth/Register'; // ❌ حذف شد (چون با لاگین ادغام شد)
+
 import Bots from './pages/public/Bots';
 import FAQ from './pages/public/FAQ';
 import Terms from './pages/public/Terms';
@@ -25,13 +26,12 @@ import TicketDetail from './pages/dashboard/TicketDetail';
 import ChangePassword from './pages/dashboard/ChangePassword';
 
 const App = () => {
-  // 👇 این بخش جادویی برای اسکرول به بالا است
+  // 👇 اسکرول به بالا هنگام تغییر صفحه
   const { pathname } = useLocation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
-  // 👆 پایان بخش اسکرول
 
   return (
     <div className="font-sans dir-rtl min-h-screen bg-gray-50 text-gray-800">
@@ -45,8 +45,9 @@ const App = () => {
         <Route path="/faq" element={<><Header /><FAQ /><Footer /></>} />
         <Route path="/terms" element={<><Header /><Terms /><Footer /></>} />
         
+        {/* 👇 تغییر مهم: هم لاگین و هم رجیستر به یک صفحه می‌روند */}
         <Route path="/login" element={<><Header /><Login /><Footer /></>} />
-        <Route path="/register" element={<><Header /><Register /><Footer /></>} />
+        <Route path="/register" element={<><Header /><Login /><Footer /></>} />
 
         {/* ۲. پنل کاربری */}
         <Route path="/dashboard" element={<DashboardLayout />}>
