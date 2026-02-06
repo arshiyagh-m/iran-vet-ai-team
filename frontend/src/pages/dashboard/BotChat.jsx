@@ -1,60 +1,84 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaPaperPlane, FaUser, FaRobot, FaArrowRight, FaSpinner, FaDog, FaCat, FaFeather, FaStethoscope, FaPaw } from 'react-icons/fa';
-import client from '../../api/client'; // کلاینت API خودمان
+import { 
+  FaPaperPlane, FaArrowRight, FaSpinner, FaRobot, 
+  FaDog, FaCat, FaFeather, FaStethoscope, FaPaw, FaFish, FaForumbee 
+} from 'react-icons/fa';
+import client from '../../api/client';
 
-// تنظیمات تم برای هر ربات
+// تنظیمات تم برای هر ربات (کامل شده)
 const botConfig = {
+  // 🐝 زنبور عسل
   bee: {
     name: 'هوش مصنوعی زنبور عسل',
-    icon: <FaFeather className="rotate-45" />, // آیکون موقت زنبور
+    icon: <FaForumbee />, 
     themeColor: 'bg-amber-500',
-    textColor: 'text-amber-600',
-    bgColor: 'bg-amber-50',
+    btnColor: 'hover:bg-amber-600',
     userMsgColor: 'bg-amber-600',
     welcome: 'سلام! من دستیار تخصصی زنبورداری هستم. درباره بیماری‌های کندو، تولید عسل یا ملکه سوالی دارید؟ 🐝',
-    apiEndpoint: '/chat/bee' // اندپوینت اختصاصی بک‌اند برای زنبور
   },
+  // 🐕 سگ
   dog: {
     name: 'دستیار سگ‌ها',
     icon: <FaDog />,
     themeColor: 'bg-orange-500',
-    textColor: 'text-orange-600',
-    bgColor: 'bg-orange-50',
+    btnColor: 'hover:bg-orange-600',
     userMsgColor: 'bg-orange-600',
     welcome: 'هاپ! من متخصص سگ‌ها هستم. درباره نژاد، تغذیه یا بیماری سگتون بپرسید. 🐕',
-    apiEndpoint: '/chat/dog'
   },
+  // 🐈 گربه
   cat: {
     name: 'دستیار گربه‌ها',
     icon: <FaCat />,
     themeColor: 'bg-blue-500',
-    textColor: 'text-blue-600',
-    bgColor: 'bg-blue-50',
+    btnColor: 'hover:bg-blue-600',
     userMsgColor: 'bg-blue-600',
     welcome: 'میو! من متخصص گربه‌ها هستم. چطور می‌تونم به پیشی ملوس شما کمک کنم؟ 🐈',
-    apiEndpoint: '/chat/cat'
   },
+  // 🐄 گاو (دام بزرگ)
   cow: {
     name: 'دستیار دام بزرگ',
     icon: <FaPaw />,
     themeColor: 'bg-green-600',
-    textColor: 'text-green-700',
-    bgColor: 'bg-green-50',
+    btnColor: 'hover:bg-green-700',
     userMsgColor: 'bg-green-700',
-    welcome: 'سلام. من در زمینه مدیریت گاوداری و بیماری‌های دام بزرگ تخصص دارم. 🐄',
-    apiEndpoint: '/chat/cow'
+    welcome: 'سلام. من در زمینه مدیریت گاوداری، ورم پستان و تغذیه دام شیری تخصص دارم. 🐄',
   },
-  // تم پیش‌فرض برای بقیه
+  // 🐎 اسب
+  horse: {
+    name: 'دستیار اسب و تک‌سمیان',
+    icon: <FaStethoscope />,
+    themeColor: 'bg-yellow-600',
+    btnColor: 'hover:bg-yellow-700',
+    userMsgColor: 'bg-yellow-700',
+    welcome: 'سلام. من متخصص بیماری‌ها و نگهداری اسب هستم. سوالی درباره لنگش یا قولنج دارید؟ 🐎',
+  },
+  // 🐓 طیور
+  poultry: {
+    name: 'دستیار طیور صنعتی',
+    icon: <FaFeather />,
+    themeColor: 'bg-red-500',
+    btnColor: 'hover:bg-red-600',
+    userMsgColor: 'bg-red-600',
+    welcome: 'سلام. در زمینه مدیریت مرغداری گوشتی و تخم‌گذار و بیماری‌های طیور در خدمتم. 🐓',
+  },
+  // 🐟 آبزیان
+  fish: {
+    name: 'دستیار آبزیان',
+    icon: <FaFish />,
+    themeColor: 'bg-cyan-600',
+    btnColor: 'hover:bg-cyan-700',
+    userMsgColor: 'bg-cyan-700',
+    welcome: 'سلام. سوالات مربوط به پرورش ماهی سردآبی و گرم‌آبی را از من بپرسید. 🐟',
+  },
+  // 🤖 پیش‌فرض
   default: {
     name: 'دستیار عمومی',
     icon: <FaRobot />,
     themeColor: 'bg-slate-800',
-    textColor: 'text-slate-800',
-    bgColor: 'bg-gray-50',
+    btnColor: 'hover:bg-slate-900',
     userMsgColor: 'bg-slate-900',
     welcome: 'سلام! چطور می‌توانم کمکتان کنم؟',
-    apiEndpoint: '/chat/general'
   }
 };
 
@@ -67,10 +91,10 @@ const BotChat = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // انتخاب تنظیمات بر اساس نوع ربات
+  // انتخاب تنظیمات بر اساس نوع ربات (اگر پیدا نشد، دیفالت را نشان بده)
   const currentBot = botConfig[type] || botConfig.default;
 
-  // تنظیم پیام خوش‌آمدگویی هنگام باز شدن صفحه
+  // وقتی نوع ربات عوض شد، پیام‌ها ریست شوند و پیام خوش‌آمد جدید بیاید
   useEffect(() => {
     setMessages([{ role: 'bot', text: currentBot.welcome }]);
   }, [type]);
@@ -87,67 +111,74 @@ const BotChat = () => {
     const userText = input;
     setInput(''); // خالی کردن اینپوت
     
-    // اضافه کردن پیام کاربر به لیست
+    // ۱. اضافه کردن پیام کاربر به لیست
     setMessages(prev => [...prev, { role: 'user', text: userText }]);
     setLoading(true);
 
     try {
-      // ارسال درخواست به سرور
-      // ما نوع بات (type) را هم می‌فرستیم تا سرور بداند از کدام دیتابیس استفاده کند
+      // ۲. ارسال درخواست به سرور
       const res = await client.post('/chat', {
         message: userText,
-        botType: type // مثلا 'bee' یا 'dog'
+        botType: type // نوع بات (مثلاً 'bee') را به بک‌اند می‌فرستیم
       });
 
-      // اضافه کردن جواب ربات
+      // ۳. اضافه کردن جواب ربات
       setMessages(prev => [...prev, { role: 'bot', text: res.data.response }]);
 
     } catch (error) {
-      console.error(error);
-      setMessages(prev => [...prev, { role: 'bot', text: 'خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.', isError: true }]);
+      console.error("Chat Error:", error);
+      
+      // مدیریت خطای تمام شدن توکن
+      let errorMsg = 'خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.';
+      if (error.response && error.response.status === 403) {
+        errorMsg = 'اعتبار توکن شما تمام شده است. لطفاً حساب خود را شارژ کنید.';
+      }
+
+      setMessages(prev => [...prev, { role: 'bot', text: errorMsg, isError: true }]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={`flex flex-col h-[calc(100vh-6rem)] rounded-3xl overflow-hidden shadow-2xl border border-gray-100 ${currentBot.bgColor}`}>
+    <div className="flex flex-col h-[calc(100vh-6rem)] bg-white rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
       
       {/* 1. هدر اختصاصی */}
-      <div className={`${currentBot.themeColor} p-4 flex items-center gap-4 text-white shadow-md z-10`}>
+      <div className={`${currentBot.themeColor} p-4 flex items-center gap-4 text-white shadow-md z-10 transition-colors duration-300`}>
         <button onClick={() => navigate('/bots')} className="p-2 hover:bg-white/20 rounded-full transition">
           <FaArrowRight />
         </button>
-        <div className="bg-white/20 p-2 rounded-xl text-2xl">
+        <div className="bg-white/20 p-2 rounded-xl text-2xl backdrop-blur-sm">
           {currentBot.icon}
         </div>
         <div>
           <h2 className="font-bold text-lg">{currentBot.name}</h2>
-          <span className="text-xs text-white/80 flex items-center gap-1">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> آنلاین
+          <span className="text-xs text-white/90 flex items-center gap-1 font-medium">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span> آنلاین و آماده پاسخگویی
           </span>
         </div>
       </div>
 
       {/* 2. محیط چت */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`
-              max-w-[80%] p-4 rounded-2xl text-sm leading-7 shadow-sm
+              max-w-[85%] md:max-w-[70%] p-4 rounded-2xl text-sm leading-7 shadow-sm whitespace-pre-line
               ${msg.role === 'user' 
                 ? `${currentBot.userMsgColor} text-white rounded-br-none` 
                 : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'}
-              ${msg.isError ? 'bg-red-100 text-red-600 border-red-200' : ''}
+              ${msg.isError ? 'bg-red-50 text-red-600 border border-red-200' : ''}
             `}>
               {msg.text}
             </div>
           </div>
         ))}
+        
         {loading && (
           <div className="flex justify-start">
             <div className="bg-white p-3 rounded-2xl rounded-bl-none shadow-sm border border-gray-100 flex gap-2 items-center text-gray-400 text-xs">
-              <FaSpinner className="animate-spin" /> در حال نوشتن...
+              <FaSpinner className="animate-spin text-blue-500" /> در حال تایپ...
             </div>
           </div>
         )}
@@ -163,19 +194,19 @@ const BotChat = () => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="پیام خود را بنویسید..."
             disabled={loading}
-            className={`w-full pl-4 pr-4 py-4 rounded-2xl bg-gray-50 border-2 border-transparent focus:bg-white outline-none transition
-              focus:border-${currentBot.textColor.split('-')[1]}-400 text-gray-700 placeholder-gray-400`}
-             // نکته: کلاس‌های داینامیک تیلویند گاهی کار نمی‌کنند، اگر رنگ بردر نیامد مهم نیست، استایل کلی حفظ می‌شود
+            className="w-full pl-4 pr-14 py-4 rounded-2xl bg-gray-50 border-2 border-transparent focus:bg-white focus:border-gray-300 outline-none transition text-gray-700 placeholder-gray-400 shadow-inner"
           />
           <button 
             type="submit" 
             disabled={loading || !input.trim()}
             className={`
-              absolute left-2 p-3 rounded-xl text-white transition shadow-lg
-              ${loading || !input.trim() ? 'bg-gray-300' : `${currentBot.themeColor} hover:opacity-90 transform active:scale-95`}
+              absolute left-2 p-3 rounded-xl text-white transition-all duration-200 shadow-md
+              ${loading || !input.trim() 
+                ? 'bg-gray-300 cursor-not-allowed' 
+                : `${currentBot.themeColor} ${currentBot.btnColor} hover:-translate-y-0.5 active:scale-95`}
             `}
           >
-            {loading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane className="text-lg" />}
+            {loading ? <FaSpinner className="animate-spin" /> : <FaPaperPlane className="text-lg -ml-0.5" />}
           </button>
         </form>
       </div>
@@ -185,4 +216,3 @@ const BotChat = () => {
 };
 
 export default BotChat;
-          
