@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaDog, FaCat, FaHorse, FaCrow, FaCow, FaFish, FaArrowLeft, FaRobot } from 'react-icons/fa';
+// 👇 اصلاح: FaCow حذف شد و FaHippo (دام سنگین) جایگزین شد
+import { FaDog, FaCat, FaHorse, FaCrow, FaHippo, FaFish, FaArrowLeft, FaRobot } from 'react-icons/fa';
 
 const Bots = () => {
   const botsList = [
@@ -8,7 +9,8 @@ const Bots = () => {
     { id: 2, name: 'متخصص گربه‌ها', icon: <FaCat />, color: 'bg-blue-500', desc: 'مشاوره رفتارشناسی، تغذیه و بیماری‌های عفونی گربه.' },
     { id: 3, name: 'اسب و تک‌سمیان', icon: <FaHorse />, color: 'bg-yellow-600', desc: 'مدیریت لنگش، قولنج و تغذیه اسب‌های مسابقه.' },
     { id: 4, name: 'طیور و پرندگان', icon: <FaCrow />, color: 'bg-red-500', desc: 'بیماری‌های نیوکاسل، آنفولانزا و مدیریت سالن مرغداری.' },
-    { id: 5, name: 'دام بزرگ (گاو)', icon: <FaCow />, color: 'bg-green-600', desc: 'مدیریت ورم پستان، تولید مثل و تغذیه دام شیری.' },
+    // 👇 اینجا آیکون تغییر کرد
+    { id: 5, name: 'دام بزرگ (گاو)', icon: <FaHippo />, color: 'bg-green-600', desc: 'مدیریت ورم پستان، تولید مثل و تغذیه دام شیری.' },
     { id: 6, name: 'آبزیان', icon: <FaFish />, color: 'bg-cyan-500', desc: 'کنترل کیفیت آب و بیماری‌های ماهیان گرم‌آبی و سردآبی.' },
   ];
 
@@ -51,6 +53,7 @@ const Bots = () => {
                   </p>
                   
                   {/* دکمه ورود به چت */}
+                  {/* هدایت به داشبورد چت (یا بات اختصاصی اگر بعدا ساختی) */}
                   <Link 
                     to="/dashboard/chat" 
                     className="px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-gray-100 transition shadow-lg flex items-center gap-2"
