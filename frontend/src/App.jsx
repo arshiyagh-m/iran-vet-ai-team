@@ -11,7 +11,7 @@ import DashboardLayout from './components/layout/DashboardLayout';
 // --- صفحات عمومی ---
 import Home from './pages/public/Home';
 import Login from './pages/auth/Login';
-// import Register from './pages/auth/Register'; // ❌ حذف شد (چون با لاگین ادغام شد)
+// import Register from './pages/auth/Register'; // حذف شده
 
 import Bots from './pages/public/Bots';
 import FAQ from './pages/public/FAQ';
@@ -25,8 +25,10 @@ import Tickets from './pages/dashboard/Tickets';
 import TicketDetail from './pages/dashboard/TicketDetail';
 import ChangePassword from './pages/dashboard/ChangePassword';
 
+// 👇 این صفحه را در مرحله قبل ساختیم (خیلی مهمه)
+import BotChat from './pages/dashboard/BotChat'; 
+
 const App = () => {
-  // 👇 اسکرول به بالا هنگام تغییر صفحه
   const { pathname } = useLocation();
 
   useEffect(() => {
@@ -45,7 +47,7 @@ const App = () => {
         <Route path="/faq" element={<><Header /><FAQ /><Footer /></>} />
         <Route path="/terms" element={<><Header /><Terms /><Footer /></>} />
         
-        {/* 👇 تغییر مهم: هم لاگین و هم رجیستر به یک صفحه می‌روند */}
+        {/* ورود و ثبت نام یکپارچه */}
         <Route path="/login" element={<><Header /><Login /><Footer /></>} />
         <Route path="/register" element={<><Header /><Login /><Footer /></>} />
 
@@ -57,6 +59,10 @@ const App = () => {
           <Route path="tickets" element={<Tickets />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="change-password" element={<ChangePassword />} />
+          
+          {/* 👇 مسیر جدید برای چت‌بات‌ها */}
+          {/* علامت :type یعنی این قسمت متغیر است (مثلا chat/bee یا chat/dog) */}
+          <Route path="chat/:type" element={<BotChat />} />
         </Route>
 
         {/* ۳. صفحه ۴۰۴ */}
