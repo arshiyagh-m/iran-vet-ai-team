@@ -7,12 +7,11 @@ import 'react-toastify/dist/ReactToastify.css';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import DashboardLayout from './components/layout/DashboardLayout';
+import AdminLayout from './components/layout/AdminLayout'; // ✅ اضافه شد
 
 // --- صفحات عمومی ---
 import Home from './pages/public/Home';
 import Login from './pages/auth/Login';
-// import Register from './pages/auth/Register'; // حذف شده (ادغام با لاگین)
-
 import Bots from './pages/public/Bots';
 import FAQ from './pages/public/FAQ';
 import Terms from './pages/public/Terms';
@@ -25,9 +24,12 @@ import Tickets from './pages/dashboard/Tickets';
 import TicketDetail from './pages/dashboard/TicketDetail';
 import ChangePassword from './pages/dashboard/ChangePassword';
 import BotChat from './pages/dashboard/BotChat';
+import BuyTokens from './pages/dashboard/BuyTokens';
 
-// 👇👇 ایمپورت صفحه جدید خرید توکن
-import BuyTokens from './pages/dashboard/BuyTokens'; 
+// --- صفحات پنل مدیریت (ادمین) --- ✅ اضافه شد
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminKnowledge from './pages/admin/AdminKnowledge';
 
 const App = () => {
   const { pathname } = useLocation();
@@ -49,28 +51,29 @@ const App = () => {
         <Route path="/faq" element={<><Header /><FAQ /><Footer /></>} />
         <Route path="/terms" element={<><Header /><Terms /><Footer /></>} />
         
-        {/* ورود و ثبت نام یکپارچه */}
         <Route path="/login" element={<><Header /><Login /><Footer /></>} />
         <Route path="/register" element={<><Header /><Login /><Footer /></>} />
 
         {/* ۲. پنل کاربری */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<Overview />} />
-          
-          {/* 👇 مسیر جدید خرید توکن */}
           <Route path="buy-tokens" element={<BuyTokens />} />
-
           <Route path="history" element={<History />} />
           <Route path="profile" element={<Profile />} />
           <Route path="tickets" element={<Tickets />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="change-password" element={<ChangePassword />} />
-          
-          {/* مسیر چت‌بات‌ها */}
           <Route path="chat/:type" element={<BotChat />} />
         </Route>
 
-        {/* ۳. صفحه ۴۰۴ */}
+        {/* ۳. پنل مدیریت (ادمین) ✅ اضافه شد */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />       {/* پیشخوان آمار */}
+          <Route path="users" element={<AdminUsers />} />    {/* مدیریت کاربران و مالی */}
+          <Route path="knowledge" element={<AdminKnowledge />} /> {/* افزودن دیتابیس */}
+        </Route>
+
+        {/* ۴. صفحه ۴۰۴ */}
         <Route path="*" element={
           <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
             <h1 className="text-9xl font-bold text-gray-300">404</h1>
