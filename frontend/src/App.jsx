@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -12,7 +12,6 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import Home from './pages/public/Home';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-// 👇 صفحات جدید ایمپورت شدند
 import Bots from './pages/public/Bots';
 import FAQ from './pages/public/FAQ';
 import Terms from './pages/public/Terms';
@@ -26,17 +25,25 @@ import TicketDetail from './pages/dashboard/TicketDetail';
 import ChangePassword from './pages/dashboard/ChangePassword';
 
 const App = () => {
+  // 👇 این بخش جادویی برای اسکرول به بالا است
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  // 👆 پایان بخش اسکرول
+
   return (
     <div className="font-sans dir-rtl min-h-screen bg-gray-50 text-gray-800">
       <ToastContainer position="top-right" rtl={true} theme="colored" />
       
       <Routes>
         
-        {/* ۱. صفحات عمومی (با هدر و فوتر) */}
+        {/* ۱. صفحات عمومی */}
         <Route path="/" element={<><Header /><Home /><Footer /></>} />
-        <Route path="/bots" element={<><Header /><Bots /><Footer /></>} />  {/* صفحه جدید */}
-        <Route path="/faq" element={<><Header /><FAQ /><Footer /></>} />    {/* صفحه جدید */}
-        <Route path="/terms" element={<><Header /><Terms /><Footer /></>} /> {/* صفحه جدید */}
+        <Route path="/bots" element={<><Header /><Bots /><Footer /></>} />
+        <Route path="/faq" element={<><Header /><FAQ /><Footer /></>} />
+        <Route path="/terms" element={<><Header /><Terms /><Footer /></>} />
         
         <Route path="/login" element={<><Header /><Login /><Footer /></>} />
         <Route path="/register" element={<><Header /><Register /><Footer /></>} />
