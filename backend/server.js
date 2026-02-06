@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
+const fs = require('fs'); // اضافه شده برای خواندن فایل
+const path = require('path'); // اضافه شده برای آدرس‌دهی فایل
 
 // --- تنظیمات اولیه ---
 const app = express();
@@ -24,7 +26,6 @@ mongoose.connect(process.env.MONGO_URI)
 // 📌 تعریف مدل‌ها (Models)
 // ==========================================
 
-// 1. User Model
 const userSchema = new mongoose.Schema({
   fullName: String,
   email: { type: String, unique: true, required: true },
@@ -37,7 +38,6 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-// 2. License Model
 const licenseSchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true },
   tokens: { type: Number, required: true },
@@ -46,7 +46,6 @@ const licenseSchema = new mongoose.Schema({
 });
 const License = mongoose.models.License || mongoose.model('License', licenseSchema);
 
-// 3. KnowledgeBase Model
 const kbSchema = new mongoose.Schema({
   title: String,
   content: String,
@@ -56,7 +55,6 @@ const kbSchema = new mongoose.Schema({
 });
 const KnowledgeBase = mongoose.models.KnowledgeBase || mongoose.model('KnowledgeBase', kbSchema);
 
-// 4. ChatLog Model
 const chatLogSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   botType: { type: String, default: 'General' },
@@ -69,7 +67,6 @@ const chatLogSchema = new mongoose.Schema({
 });
 const ChatLog = mongoose.models.ChatLog || mongoose.model('ChatLog', chatLogSchema);
 
-// 5. Ticket & Notification Models
 const ticketSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   subject: String,
@@ -86,12 +83,12 @@ const Notification = mongoose.models.Notification || mongoose.model('Notificatio
 
 
 // ==========================================
-// 🛡️ تنظیمات قلمرو ربات‌ها (BOT SCOPES) - جدید و مهم
+// 🛡️ تنظیمات قلمرو ربات‌ها (BOT SCOPES)
 // ==========================================
 const BOT_SCOPES = {
     bee: {
         title: "زنبور عسل",
-        allowed: "کندو، ملکه، عسل، موم، ژل رویال، بیماری‌های زنبور، گرده",
+        allowed: "کندو، ملکه، عسل، موم، ژل رویال، بیماری‌های زنبور، گرده، زنبورستان",
         forbidden: "سگ، گربه، دام، طیور، اسب، ماهی"
     },
     dog: {
@@ -116,7 +113,7 @@ const BOT_SCOPES = {
     },
     poultry: {
         title: "طیور صنعتی",
-        allowed: "مرغ، جوجه، تخم‌گذار، گوشتی، نیوکاسل، آنفولانزا، سالن",
+        allowed: "مرغ، جوجه، تخم‌گذار، گوشتی، نیوکاسل، آنفولانزا، سالن مرغداری",
         forbidden: "سگ، گربه، دام بزرگ"
     },
     fish: {
@@ -186,7 +183,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     const userId = req.user.id;
     let user = await User.findById(userId);
 
-    // --- گام صفر: بررسی سلام و احوال‌پرسی (رایگان) ---
+    // --- گام صفر: بررسی سلام ---
     const greetings = ['سلام', 'درود', 'خسته نباشید', 'چطوری', 'خوبی', 'صبح بخیر', 'شب بخیر', 'hi', 'hello'];
     const isGreeting = greetings.some(g => message.trim().toLowerCase().startsWith(g)) && message.length < 30;
 
@@ -198,7 +195,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         });
     }
 
-    // --- گام یک: بررسی اعتبار کاربر ---
+    // --- گام یک: بررسی اعتبار ---
     let activeLicense = null;
     let useUserTokens = false;
 
@@ -264,26 +261,24 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
             { role: "system", content: systemPrompt },
             { role: "user", content: message }
         ],
-        temperature: isFallback ? 0.3 : 0.2, // دما پایین برای دقت بیشتر
+        temperature: isFallback ? 0.3 : 0.2,
     });
 
     let aiAnswer = response.choices[0].message.content;
 
     // --- گام چهار: پردازش پاسخ ---
     if (aiAnswer.includes("OUT_OF_SCOPE")) {
-        // سوال نامرتبط بود
         aiAnswer = `⛔ من ربات تخصصی **${scope.title}** هستم و صلاحیت پاسخگویی به سوالات مربوط به سایر حیوانات یا موضوعات متفرقه را ندارم. لطفاً سوال مرتبط بپرسید.`;
-        shouldDeductToken = false; // ❌ توکن کسر نمی‌شود
+        shouldDeductToken = false; 
         isFallback = false; 
     } 
     else if (isFallback) {
-        // سوال مرتبط بود اما از دانش عمومی پاسخ داده شد
         const warningStart = "⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و هنوز در دیتابیس اختصاصی ما تایید نشده است.\n\n";
         const warningEnd = "\n\n🔴 **هشدار:** لطفاً پیش از هرگونه اقدام درمانی، با دامپزشک مشورت کنید.";
         aiAnswer = warningStart + aiAnswer + warningEnd;
     }
 
-    // --- گام پنج: کسر اعتبار (فقط در صورت لزوم) ---
+    // --- گام پنج: کسر اعتبار ---
     if (shouldDeductToken) {
         if (useUserTokens) {
             user.tokens -= 1;
@@ -362,6 +357,70 @@ app.get('/api/notifications', authenticateToken, async (req, res) => {
     const notifs = await Notification.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(notifs);
 });
+
+
+// ==========================================
+// 🔥 روت ویژه: وارد کردن دیتابیس زنبور (بدون ترمینال)
+// ==========================================
+app.get('/api/setup/import-bee', async (req, res) => {
+    try {
+        const filePath = path.join(__dirname, 'data', 'bee_data.csv');
+        
+        // 1. چک کردن وجود فایل
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ message: '❌ فایل bee_data.csv در پوشه backend/data پیدا نشد.' });
+        }
+
+        // 2. خواندن فایل
+        const data = fs.readFileSync(filePath, 'utf8');
+        const rows = data.split('\n').slice(1); // حذف هدر
+        let count = 0;
+
+        for (const row of rows) {
+            if (!row.trim()) continue;
+            
+            // پارس کردن ساده CSV
+            // فرض می‌کنیم ستون‌ها با ویرگول جدا شدند و ترتیبشان مثل فایل شماست:
+            // نام بیماری، دسته‌بندی، علائم، درمان، توضیحات
+            
+            // نکته: اگر در متن ویرگول باشد، این روش ساده خطا می‌دهد. برای CSV پیچیده باید از کتابخانه csv-parser استفاده کرد.
+            // اما چون خواستی بدون ترمینال باشد، این نسخه ساده را می‌گذارم:
+            const cols = row.split(','); 
+            
+            if (cols.length >= 4) {
+                const title = cols[0]?.trim();
+                const subCategory = cols[1]?.trim();
+                const symptoms = cols[2]?.trim();
+                const treatment = cols[3]?.trim();
+                const extra = cols[4]?.trim() || '';
+
+                const content = `بیماری: ${title}\nعلائم: ${symptoms}\nدرمان: ${treatment}\nتوضیحات: ${extra}`;
+
+                const exists = await KnowledgeBase.findOne({ title });
+                if (!exists) {
+                    await KnowledgeBase.create({
+                        title,
+                        category: 'bee', // 🐝 اختصاصی زنبور
+                        subCategory,
+                        content,
+                        tags: ['bee', 'disease', subCategory]
+                    });
+                    count++;
+                }
+            }
+        }
+
+        res.json({ 
+            message: `✅ عملیات موفق! ${count} رکورد جدید به دیتابیس زنبور اضافه شد.`,
+            status: 'success'
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'خطا در ایمپورت: ' + error.message });
+    }
+});
+
 
 // اجرای سرور
 app.listen(PORT, () => {
