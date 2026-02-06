@@ -7,7 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import DashboardLayout from './components/layout/DashboardLayout';
-import AdminLayout from './components/layout/AdminLayout'; // ✅ اضافه شد
+import AdminLayout from './components/layout/AdminLayout';
 
 // --- صفحات عمومی ---
 import Home from './pages/public/Home';
@@ -26,10 +26,13 @@ import ChangePassword from './pages/dashboard/ChangePassword';
 import BotChat from './pages/dashboard/BotChat';
 import BuyTokens from './pages/dashboard/BuyTokens';
 
-// --- صفحات پنل مدیریت (ادمین) --- ✅ اضافه شد
+// --- صفحات پنل مدیریت (ادمین) ---
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminKnowledge from './pages/admin/AdminKnowledge';
+// 👇👇 ایمپورت‌های جدید برای تکمیل پنل ادمین
+import AdminChatLogs from './pages/admin/AdminChatLogs';
+import AdminTickets from './pages/admin/AdminTickets';
 
 const App = () => {
   const { pathname } = useLocation();
@@ -66,11 +69,15 @@ const App = () => {
           <Route path="chat/:type" element={<BotChat />} />
         </Route>
 
-        {/* ۳. پنل مدیریت (ادمین) ✅ اضافه شد */}
+        {/* ۳. پنل مدیریت (ادمین) - کامل شده ✅ */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />       {/* پیشخوان آمار */}
           <Route path="users" element={<AdminUsers />} />    {/* مدیریت کاربران و مالی */}
-          <Route path="knowledge" element={<AdminKnowledge />} /> {/* افزودن دیتابیس */}
+          <Route path="knowledge" element={<AdminKnowledge />} /> {/* دیتابیس هوشمند */}
+          
+          {/* 👇 مسیرهای اضافه شده: */}
+          <Route path="chats" element={<AdminChatLogs />} />   {/* مانیتورینگ چت‌ها */}
+          <Route path="tickets" element={<AdminTickets />} />  {/* مدیریت تیکت‌ها */}
         </Route>
 
         {/* ۴. صفحه ۴۰۴ */}
