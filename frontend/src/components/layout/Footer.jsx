@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaInstagram, FaWhatsapp, FaEnvelope, FaPhone, FaMapMarkerAlt, FaTelegramPlane } from 'react-icons/fa';
+// 👇 ایمپورت لوگو
+import logo from '../../assets/logo.png';
 
 const Footer = () => {
   return (
@@ -11,8 +13,11 @@ const Footer = () => {
           
           {/* ستون ۱: درباره ما */}
           <div className="col-span-1 md:col-span-1">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xl">IV</div>
+            <div className="flex items-center gap-3 mb-6">
+              {/* 👇 نمایش لوگو داخل کادر سفید گرد */}
+              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-1 shadow-lg">
+                 <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+              </div>
               <span className="text-2xl font-bold">IranVetAI</span>
             </div>
             <p className="text-slate-400 leading-relaxed mb-6 text-sm text-justify">
