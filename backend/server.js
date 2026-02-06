@@ -50,7 +50,7 @@ const License = mongoose.models.License || mongoose.model('License', licenseSche
 const kbSchema = new mongoose.Schema({
   title: String,
   content: String,
-  category: String, // e.g., 'bee', 'dog'
+  category: String,
   subCategory: String,
   tags: [String]
 });
@@ -83,6 +83,53 @@ const notifSchema = new mongoose.Schema({
   title: String, message: String, link: String, isRead: { type: Boolean, default: false }
 }, { timestamps: true });
 const Notification = mongoose.models.Notification || mongoose.model('Notification', notifSchema);
+
+
+// ==========================================
+// 🛡️ تنظیمات قلمرو ربات‌ها (BOT SCOPES) - جدید و مهم
+// ==========================================
+const BOT_SCOPES = {
+    bee: {
+        title: "زنبور عسل",
+        allowed: "کندو، ملکه، عسل، موم، ژل رویال، بیماری‌های زنبور، گرده",
+        forbidden: "سگ، گربه، دام، طیور، اسب، ماهی"
+    },
+    dog: {
+        title: "سگ‌ها",
+        allowed: "سگ، توله، نژادها، واکسن سگ، پاروا، دیستمپر، تربیت سگ",
+        forbidden: "زنبور، گربه (مگر مرتبط با سگ)، دام بزرگ، پرندگان"
+    },
+    cat: {
+        title: "گربه‌ها",
+        allowed: "گربه، بچه گربه، واکسن، تغذیه گربه، ریزش مو، عقیم‌سازی",
+        forbidden: "سگ، زنبور، اسب، گاو"
+    },
+    cow: {
+        title: "دام بزرگ (گاو)",
+        allowed: "گاو، گوساله، شیردهی، ورم پستان، تب برفکی، تغذیه دام",
+        forbidden: "حیوانات خانگی، زنبور، ماهی"
+    },
+    horse: {
+        title: "اسب و تک‌سمیان",
+        allowed: "اسب، کره اسب، لنگش، قولنج، نعل‌بندی، تغذیه اسب",
+        forbidden: "زنبور، ماهی، طیور"
+    },
+    poultry: {
+        title: "طیور صنعتی",
+        allowed: "مرغ، جوجه، تخم‌گذار، گوشتی، نیوکاسل، آنفولانزا، سالن",
+        forbidden: "سگ، گربه، دام بزرگ"
+    },
+    fish: {
+        title: "آبزیان",
+        allowed: "ماهی، قزل‌آلا، کپور، آکواریوم، کیفیت آب، بیماری آبزیان",
+        forbidden: "حیوانات خشکی‌زی، زنبور"
+    },
+    general: {
+        title: "دامپزشکی عمومی",
+        allowed: "تمامی حیوانات",
+        forbidden: "سیاست، ورزش، ارز، برنامه‌نویسی"
+    }
+};
 
 
 // ==========================================
@@ -132,7 +179,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 
-// 2️⃣ چت هوشمند (RAG + License + Fallback + Smart Deduction) 🧠✅✅
+// 2️⃣ چت هوشمند (RAG + License + Fallback + Strict Scopes) 🧠✅✅
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
     const { message, botType, licenseCode } = req.body; 
@@ -145,8 +192,8 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
     if (isGreeting) {
         return res.json({ 
-            response: `سلام! من دستیار هوشمند ${botType === 'general' ? 'دامپزشکی' : botType} هستم. چطور می‌توانم در زمینه تخصصی به شما کمک کنم؟`, 
-            remainingTokens: user.tokens, // کسر نمی‌شود
+            response: `سلام! من دستیار هوشمند ${BOT_SCOPES[botType]?.title || 'دامپزشکی'} هستم. چطور می‌توانم کمک کنم؟`, 
+            remainingTokens: user.tokens, 
             isFallback: false 
         });
     }
@@ -176,33 +223,37 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     let systemPrompt = "";
     let isFallback = false;
     let referenceText = "";
-    let shouldDeductToken = true; // پیش‌فرض توکن کسر می‌شود مگر اینکه نامرتبط باشد
+    let shouldDeductToken = true; 
+
+    // دریافت تنظیمات اسکوپ ربات
+    const scope = BOT_SCOPES[botType] || BOT_SCOPES.general;
 
     if (relatedDocs.length > 0) {
-        // ✅ حالت اول: اطلاعات در دیتابیس هست
+        // ✅ اطلاعات در دیتابیس هست
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         referenceText = relatedDocs.map(doc => doc.title).join(", ");
         
         systemPrompt = `
-            شما دستیار دامپزشک متخصص در زمینه "${botType}" هستید.
-            اطلاعات علمی تایید شده زیر را بخوانید:
+            شما متخصص "${scope.title}" هستید.
+            فقط از اطلاعات زیر استفاده کن و پاسخ بده:
             ${contextData}
-            
-            دستورالعمل: فقط و فقط بر اساس اطلاعات بالا به سوال کاربر پاسخ بده.
         `;
     } else {
-        // ⚠️ حالت دوم: اطلاعات نیست (Fallback) -> باید چک کنیم سوال مرتبط است یا نه
+        // ⚠️ اطلاعات نیست (Fallback) -> فعال کردن گاردریل سخت‌گیرانه
         isFallback = true;
         referenceText = "دانش عمومی هوش مصنوعی";
         
         systemPrompt = `
-            شما یک متخصص دامپزشکی در زمینه "${botType}" هستید.
+            🔴 دستورالعمل امنیتی (STRICT MODE):
             
-            دستورالعمل بسیار مهم:
-            1. ابتدا بررسی کن آیا سوال کاربر مستقیماً به "${botType}" یا سلامت حیوانات مرتبط است؟
-            2. اگر سوال درباره سیاست، ورزش، قیمت دلار، برنامه‌نویسی یا مسائل غیرمرتبط بود، فقط بگو: "OUT_OF_SCOPE".
-            3. اگر سوال مرتبط بود ولی در دیتابیس نبود، با تکیه بر دانش عمومی دامپزشکی پاسخ بده.
-            4. پاسخ باید علمی، محتاطانه و دقیق باشد.
+            تو فقط متخصص "${scope.title}" هستی.
+            
+            1. موضوعات مجاز: ${scope.allowed}
+            2. موضوعات ممنوع: ${scope.forbidden}، سیاست، ورزش، تکنولوژی و هر چیزی غیر از ${scope.title}.
+            
+            وظیفه:
+            - اگر سوال درباره "${scope.title}" است: علمی و دقیق پاسخ بده.
+            - اگر سوال درباره "${scope.forbidden}" یا موارد نامرتبط است: فقط بگو "OUT_OF_SCOPE".
         `;
     }
 
@@ -213,7 +264,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
             { role: "system", content: systemPrompt },
             { role: "user", content: message }
         ],
-        temperature: isFallback ? 0.5 : 0.2,
+        temperature: isFallback ? 0.3 : 0.2, // دما پایین برای دقت بیشتر
     });
 
     let aiAnswer = response.choices[0].message.content;
@@ -221,9 +272,9 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     // --- گام چهار: پردازش پاسخ ---
     if (aiAnswer.includes("OUT_OF_SCOPE")) {
         // سوال نامرتبط بود
-        aiAnswer = `من ربات تخصصی ${botType} هستم و نمی‌توانم به سوالات خارج از این حیطه پاسخ دهم. لطفاً سوال مرتبط بپرسید.`;
+        aiAnswer = `⛔ من ربات تخصصی **${scope.title}** هستم و صلاحیت پاسخگویی به سوالات مربوط به سایر حیوانات یا موضوعات متفرقه را ندارم. لطفاً سوال مرتبط بپرسید.`;
         shouldDeductToken = false; // ❌ توکن کسر نمی‌شود
-        isFallback = false; // نیازی به هشدار نیست
+        isFallback = false; 
     } 
     else if (isFallback) {
         // سوال مرتبط بود اما از دانش عمومی پاسخ داده شد
