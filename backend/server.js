@@ -427,6 +427,21 @@ app.get('/api/setup/import-bee', async (req, res) => {
 // روت‌های ادمین
 app.use('/api/admin', adminRoutes);
 
+// 🔥 روت موقت برای ساخت ادمین
+app.get('/api/setup/make-admin/:email', async (req, res) => {
+    try {
+        const user = await User.findOneAndUpdate(
+            { email: req.params.email }, 
+            { role: 'admin' },
+            { new: true }
+        );
+        if (!user) return res.status(404).json({ message: 'کاربر یافت نشد' });
+        res.json({ message: `✅ تبریک! کاربر ${user.fullName} اکنون مدیر سیستم است.`, user });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 
 // اجرای سرور
 app.listen(PORT, () => {
