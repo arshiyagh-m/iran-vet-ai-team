@@ -1,83 +1,99 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaStethoscope } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { FaBars, FaTimes, FaRobot, FaUser, FaSignInAlt } from 'react-icons/fa';
 
 const Header = () => {
-  const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const [user, setUser] = useState(null);
 
-  // بررسی وضعیت لاگین با هر بار تغییر صفحه
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, [location]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    navigate('/login');
-  };
+  // چک کردن اینکه آیا کاربر لاگین است یا نه (برای نمایش دکمه مناسب)
+  const isLoggedIn = !!localStorage.getItem('token');
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        
-        {/* لوگو */}
-        <Link to="/" className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-brand-navy rounded-xl flex items-center justify-center text-white">
-            <FaStethoscope size={20} />
-          </div>
-          <span className="text-xl font-bold text-brand-navy hidden sm:block">
-            ایران وت AI
-          </span>
-        </Link>
-
-        {/* منوی وسط (فقط برای دسکتاپ) */}
-        <nav className="hidden md:flex gap-8 text-gray-600 font-medium">
-          <Link to="/" className="hover:text-brand-green transition">صفحه اصلی</Link>
-          <Link to="/dashboard/chat" className="hover:text-brand-green transition">چت هوشمند</Link>
-        </nav>
-
-        {/* بخش دکمه‌ها - بر اساس وضعیت لاگین */}
-        <div className="flex gap-3 items-center">
+    <header className="bg-white/90 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 shadow-sm">
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex justify-between items-center">
           
-          {user ? (
-            <>
-              {/* اگر ادمین بود دکمه پنل مدیریت بیاد */}
-              {user.role === 'admin' && (
-                <Link to="/admin" className="px-3 py-2 bg-red-100 text-red-600 rounded-lg text-sm font-bold hover:bg-red-200 transition">
-                  پنل مدیریت
-                </Link>
-              )}
+          {/* لوگو */}
+          <Link to="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-gradient-to-tr from-blue-900 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-900/20">
+              IV
+            </div>
+            <span className="text-2xl font-extrabold text-slate-800 tracking-tight">
+              Iran<span className="text-blue-600">Vet</span>AI
+            </span>
+          </Link>
 
-              <Link to="/dashboard" className="px-4 py-2 bg-gray-100 text-brand-navy rounded-lg font-medium hover:bg-gray-200 transition hidden sm:block">
-                داشبورد
-              </Link>
+          {/* منوی دسکتاپ */}
+          <div className="hidden md:flex items-center gap-8">
+            <Link to="/" className={`text-sm font-medium transition ${location.pathname === '/' ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
+              خانه
+            </Link>
+            <Link to="/bots" className={`text-sm font-medium transition ${location.pathname === '/bots' ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
+              ربات‌های هوشمند
+            </Link>
+            <Link to="/faq" className={`text-sm font-medium transition ${location.pathname === '/faq' ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}>
+              سوالات متداول
+            </Link>
+          </div>
 
-              <button 
-                onClick={handleLogout} 
-                className="px-4 py-2 text-red-500 font-medium hover:bg-red-50 rounded-lg transition"
+          {/* دکمه‌های سمت چپ */}
+          <div className="hidden md:flex items-center gap-4">
+            <Link 
+              to="/bots" 
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-700 rounded-xl font-bold hover:bg-blue-100 transition"
+            >
+              <FaRobot />
+              هدایت به ربات‌ها
+            </Link>
+
+            {isLoggedIn ? (
+              <Link 
+                to="/dashboard" 
+                className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20"
               >
-                خروج
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="px-5 py-2 text-brand-navy font-medium hover:bg-gray-50 rounded-lg transition">
-                ورود
+                <FaUser />
+                پنل کاربری
               </Link>
-              <Link to="/register" className="px-5 py-2 bg-brand-green text-white font-medium rounded-lg hover:bg-green-700 shadow-lg shadow-green-200 transition">
-                ثبت نام
+            ) : (
+              <Link 
+                to="/login" 
+                className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20"
+              >
+                <FaSignInAlt />
+                ورود / ثبت نام
               </Link>
-            </>
-          )}
+            )}
+          </div>
 
+          {/* دکمه منوی موبایل */}
+          <button onClick={() => setIsOpen(!isOpen)} className="md:hidden text-slate-700 text-2xl">
+            {isOpen ? <FaTimes /> : <FaBars />}
+          </button>
         </div>
 
+        {/* منوی موبایل */}
+        {isOpen && (
+          <div className="md:hidden mt-4 pb-4 space-y-3 animate-fadeIn">
+            <Link to="/" onClick={() => setIsOpen(false)} className="block py-2 text-gray-600 hover:text-blue-600">خانه</Link>
+            <Link to="/bots" onClick={() => setIsOpen(false)} className="block py-2 text-gray-600 hover:text-blue-600">ربات‌ها</Link>
+            <Link to="/faq" onClick={() => setIsOpen(false)} className="block py-2 text-gray-600 hover:text-blue-600">سوالات متداول</Link>
+            <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
+               <Link to="/bots" onClick={() => setIsOpen(false)} className="w-full text-center py-3 bg-blue-50 text-blue-700 rounded-xl font-bold">
+                 مشاهده ربات‌ها
+               </Link>
+               {isLoggedIn ? (
+                 <Link to="/dashboard" onClick={() => setIsOpen(false)} className="w-full text-center py-3 bg-slate-900 text-white rounded-xl font-bold">
+                   پنل کاربری
+                 </Link>
+               ) : (
+                 <Link to="/login" onClick={() => setIsOpen(false)} className="w-full text-center py-3 bg-slate-900 text-white rounded-xl font-bold">
+                   ورود به حساب
+                 </Link>
+               )}
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
