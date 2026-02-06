@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaEnvelope, FaLock, FaSignInAlt, FaArrowLeft } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaSignInAlt, FaArrowRight, FaHome } from 'react-icons/fa';
 import client from '../../api/client';
+// 👇 ایمپورت لوگو
+import logo from '../../assets/logo.png';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -29,7 +31,7 @@ const Login = () => {
 
       toast.success(`خوش آمدید ${res.data.user.name} عزیز 👋`);
 
-      // 👇👇 اصلاح مهم: هدایت به داشبورد اصلی (Overview) به جای چت
+      // هدایت به داشبورد
       navigate('/dashboard');
 
     } catch (error) {
@@ -42,9 +44,19 @@ const Login = () => {
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-3xl shadow-xl border border-gray-100 relative">
         
+        {/* 👇 دکمه بازگشت به خانه (بالا سمت راست) */}
+        <Link to="/" className="absolute top-6 right-6 text-gray-400 hover:text-blue-600 transition" title="بازگشت به صفحه اصلی">
+            <FaHome size={22} />
+        </Link>
+
         <div className="text-center">
+          {/* 👇 نمایش لوگو بالای فرم */}
+          <div className="flex justify-center mb-4">
+              <img src={logo} alt="Logo" className="h-16 w-auto object-contain" />
+          </div>
+
           <h2 className="mt-2 text-3xl font-extrabold text-gray-900">ورود به حساب کاربری</h2>
           <p className="mt-2 text-sm text-gray-600">
             هنوز ثبت نام نکرده‌اید؟{' '}
@@ -95,7 +107,6 @@ const Login = () => {
 
           <div className="flex items-center justify-end">
             <div className="text-sm">
-              {/* لینک ساده برای فراموشی رمز که می‌تونی به صفحه اصلی یا ایمیل وصل کنی */}
               <a href="mailto:admin@vetai.com?subject=فراموشی رمز عبور" className="font-medium text-blue-600 hover:text-blue-500">
                 رمز عبور را فراموش کرده‌اید؟
               </a>
@@ -106,7 +117,7 @@ const Login = () => {
             type="submit"
             disabled={loading}
             className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white transition-all
-              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-900 hover:bg-blue-800 shadow-lg shadow-blue-900/30'}
+              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 shadow-lg shadow-blue-900/30'}
             `}
           >
             <span className="absolute left-0 inset-y-0 flex items-center pl-3">
@@ -116,10 +127,11 @@ const Login = () => {
           </button>
         </form>
         
-        <div className="text-center mt-4 pt-4 border-t border-gray-100">
-            <Link to="/" className="text-sm text-gray-500 hover:text-gray-800 flex items-center justify-center gap-2 transition">
-                <FaArrowLeft size={12} />
-                بازگشت به صفحه اصلی
+        {/* 👇 دکمه بازگشت به خانه (پایین فرم) */}
+        <div className="text-center mt-6 pt-6 border-t border-gray-100">
+            <Link to="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-slate-900 font-medium transition">
+                <FaArrowRight size={14} />
+                بازگشت به صفحه اصلی سایت
             </Link>
         </div>
 
