@@ -1,115 +1,142 @@
 const OpenAI = require('openai');
 const ChatLog = require('../models/ChatLog');
 const User = require('../models/User');
-// فرض بر این است که این مدل‌ها را داری. اگر نداری بگو تا کدشان را بدهم.
-const KnowledgeBase = require('../models/KnowledgeBase'); 
-// const License = require('../models/License'); // اگر سیستم لایسنس داری آن‌کامنت کن
+const KnowledgeBase = require('../models/KnowledgeBase');
+const License = require('../models/License'); // مدل لایسنس را هم اضافه کردیم
 
-// تنظیمات OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // کلید را حتما در فایل .env بگذار
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 exports.chat = async (req, res) => {
   try {
-    // ۱. دریافت اطلاعات از فرانت‌‌اند
-    // botType: نوع ربات (bee, dog, ...)
-    // message: سوال کاربر
-    const { message, botType } = req.body;
-    const userId = req.user.id; // از میدل‌ور auth می‌آید
+    // ۱. دریافت اطلاعات
+    const { message, botType, licenseCode } = req.body;
+    const userId = req.user.id;
+    let user = await User.findById(userId);
 
-    // ۲. بررسی اعتبار کاربر (توکن)
-    const user = await User.findById(userId);
-    if (!user || user.tokens < 1) {
-      return res.status(403).json({ message: 'اعتبار توکن شما کافی نیست. لطفاً حساب خود را شارژ کنید.' });
+    // --- گام صفر: بررسی سلام و احوال‌پرسی (رایگان) ---
+    const greetings = ['سلام', 'درود', 'خسته نباشید', 'چطوری', 'خوبی', 'صبح بخیر', 'شب بخیر', 'hi', 'hello'];
+    const isGreeting = greetings.some(g => message.trim().toLowerCase().startsWith(g)) && message.length < 30;
+
+    if (isGreeting) {
+        return res.json({ 
+            response: `سلام! من دستیار هوشمند ${botType === 'general' ? 'دامپزشکی' : botType} هستم. چطور می‌توانم کمکتان کنم؟`, 
+            remainingTokens: user.tokens, // کسر نمی‌شود
+            isFallback: false 
+        });
     }
 
-    // ۳. جستجو در دیتابیس دانش (RAG - Retrieval Augmented Generation)
-    // اینجا دنبال اسنادی می‌گردیم که به سوال کاربر و نوع ربات مرتبط باشند
-    let contextData = "";
-    let references = [];
-    
-    // نکته: برای این کار باید روی فیلد content مدل KnowledgeBase ایندکس متنی (Text Index) ساخته باشی
-    // یا می‌تونی از جستجوی ساده Regex استفاده کنی (برای شروع Regex ساده‌تره)
+    // --- گام یک: بررسی اعتبار (لایسنس یا توکن کاربر) ---
+    let activeLicense = null;
+    let useUserTokens = false;
+
+    if (licenseCode) {
+        // اگر کد لایسنس فرستاده شده
+        activeLicense = await License.findOne({ code: licenseCode, isActive: true });
+        if (!activeLicense || activeLicense.tokens < 1) {
+            return res.status(400).json({ message: 'لایسنس نامعتبر یا فاقد اعتبار است.' });
+        }
+    } else {
+        // استفاده از توکن شخصی
+        if (user.tokens < 1) {
+            return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است.' });
+        }
+        useUserTokens = true;
+    }
+
+    // --- گام دو: جستجو در دیتابیس (RAG) ---
     const relatedDocs = await KnowledgeBase.find({
-        category: botType, // فقط در دسته بندی مربوطه بگرد (مثلا فقط اسناد زنبور)
-        $or: [
-            { content: { $regex: message, $options: 'i' } }, // جستجو در متن
-            { title: { $regex: message, $options: 'i' } }    // جستجو در عنوان
-        ]
-    }).limit(2); // فقط ۲ سند مرتبط‌ترین را بردار که توکن زیاد مصرف نشه
+        category: botType,
+        content: { $regex: message, $options: 'i' }
+    }).limit(3);
 
-    if (relatedDocs.length > 0) {
-        contextData = relatedDocs.map(doc => doc.content).join("\n\n---\n\n");
-        references = relatedDocs.map(doc => doc.title || 'منبع داخلی');
-    }
-
-    // ۴. ساخت پرامپت سیستم (System Prompt)
     let systemPrompt = "";
     let isFallback = false;
+    let referenceText = "";
+    let shouldDeductToken = true; // پیش‌فرض: توکن کم شود
 
-    if (contextData) {
-        // حالت اول: اطلاعات در دیتابیس ما هست
+    if (relatedDocs.length > 0) {
+        // ✅ حالت اول: اطلاعات در دیتابیس هست
+        const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
+        referenceText = relatedDocs.map(doc => doc.title).join(", ");
+        
         systemPrompt = `
-        شما یک دستیار هوشمند دامپزشکی تخصصی در زمینه "${botType}" هستید.
-        من به شما اطلاعاتی از منابع معتبر خودم می‌دهم. وظیفه شما این است که **فقط و فقط** با استفاده از این اطلاعات به سوال کاربر پاسخ دهید.
+        شما دستیار دامپزشک متخصص در زمینه "${botType}" هستید.
+        من به شما اطلاعاتی از منابع معتبر خودم می‌دهم. 
+        وظیفه شما این است که **فقط و فقط** با استفاده از این اطلاعات به سوال کاربر پاسخ دهید.
         
         اطلاعات منبع:
         ${contextData}
-
-        اگر پاسخ در اطلاعات بالا نبود، بگو "متاسفانه در منابع من اطلاعات کافی برای این سوال وجود ندارد".
         `;
     } else {
-        // حالت دوم: اطلاعات در دیتابیس نیست (Fallback) -> استفاده از دانش عمومی هوش مصنوعی
+        // ⚠️ حالت دوم: اطلاعات نیست (Fallback) -> بررسی مرتبط بودن سوال
         isFallback = true;
-        systemPrompt = `
-        شما یک متخصص دامپزشکی با تجربه و دلسوز هستید. تخصص شما: ${botType}.
-        کاربر سوالی پرسیده که در دیتابیس اختصاصی ما موجود نیست.
-        لطفاً با استفاده از دانش عمومی و علمی خودت پاسخ دهید.
+        referenceText = "دانش عمومی هوش مصنوعی";
         
-        قوانین مهم:
-        1. پاسخ باید کوتاه، کاربردی و دقیق باشد.
-        2. اگر موضوع خطرناک است (مثل بیماری‌های کشنده)، حتما توصیه کن به دامپزشک مراجعه کنند.
-        3. لحن شما باید رسمی و محترمانه باشد.
+        systemPrompt = `
+        شما یک متخصص دامپزشکی با تجربه در زمینه "${botType}" هستید.
+        
+        دستورالعمل مهم:
+        1. ابتدا بررسی کن آیا سوال کاربر مستقیماً به "${botType}" یا سلامت حیوانات مرتبط است؟
+        2. اگر سوال درباره سیاست، ورزش، قیمت دلار، برنامه‌نویسی یا مسائل غیرمرتبط بود، فقط بگو: "OUT_OF_SCOPE".
+        3. اگر سوال مرتبط بود ولی در دیتابیس نبود، با تکیه بر دانش عمومی پاسخ علمی و دقیق بده.
         `;
     }
 
-    // ۵. ارسال به OpenAI
+    // --- گام سه: ارسال به OpenAI ---
     const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // یا gpt-3.5-turbo (ارزان‌تر) یا gpt-4-turbo
+        model: "gpt-3.5-turbo", // برای صرفه‌جویی (می‌توانید به gpt-4o تغییر دهید)
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: message }
         ],
-        temperature: isFallback ? 0.7 : 0.2, // اگر از دیتابیس می‌خونی دقیق باش (0.2)، اگر از خودت میگی خلاق باش (0.7)
+        temperature: isFallback ? 0.5 : 0.2, 
     });
 
     let aiAnswer = completion.choices[0].message.content;
 
-    // ۶. اضافه کردن هشدار در حالت Fallback
-    if (isFallback) {
-        aiAnswer = `⚠️ **پاسخ عمومی هوش مصنوعی:**\n${aiAnswer}\n\n🔴 *توجه: این پاسخ بر اساس دیتابیس اختصاصی ما نیست. لطفاً برای موارد حساس با دامپزشک مشورت کنید.*`;
+    // --- گام چهار: پردازش پاسخ ---
+    if (aiAnswer.includes("OUT_OF_SCOPE")) {
+        // سوال نامرتبط بود
+        aiAnswer = `من ربات تخصصی ${botType} هستم و نمی‌توانم به سوالات خارج از این حیطه (مثل سیاست، دلار و...) پاسخ دهم. لطفاً سوال مرتبط بپرسید.`;
+        shouldDeductToken = false; // ❌ توکن کسر نمی‌شود
+        isFallback = false; 
+    } 
+    else if (isFallback) {
+        // سوال مرتبط بود اما از دانش عمومی پاسخ داده شد
+        const warningStart = "⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و هنوز در دیتابیس اختصاصی ما تایید نشده است.\n\n";
+        const warningEnd = "\n\n🔴 **هشدار:** لطفاً پیش از هرگونه اقدام درمانی، با دامپزشک مشورت کنید.";
+        aiAnswer = warningStart + aiAnswer + warningEnd;
     }
 
-    // ۷. کسر توکن از کاربر
-    user.tokens -= 1; 
-    await user.save();
+    // --- گام پنج: کسر اعتبار (فقط اگر لازم باشد) ---
+    if (shouldDeductToken) {
+        if (useUserTokens) {
+            user.tokens -= 1;
+            await user.save();
+        } else if (activeLicense) {
+            activeLicense.tokens -= 1;
+            await activeLicense.save();
+        }
+    }
 
-    // ۸. ذخیره در لاگ چت
+    // --- گام شش: ذخیره در لاگ چت ---
     const newChat = new ChatLog({
         user: userId,
         botType: botType,
         question: message,
         answer: aiAnswer,
-        reference: references.join(', '), // لیست منابع استفاده شده
-        isFallbackResponse: isFallback
+        reference: referenceText,
+        licenseUsed: licenseCode || 'UserTokens',
+        isFallbackResponse: isFallback && shouldDeductToken
     });
     await newChat.save();
 
-    // ۹. ارسال پاسخ به فرانت‌‌اند
+    // --- گام هفت: ارسال پاسخ ---
     res.json({
         response: aiAnswer,
-        remainingTokens: user.tokens,
+        remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
         isFallback: isFallback
     });
 
@@ -118,4 +145,3 @@ exports.chat = async (req, res) => {
     res.status(500).json({ message: 'خطا در برقراری ارتباط با سرویس هوش مصنوعی.' });
   }
 };
-
