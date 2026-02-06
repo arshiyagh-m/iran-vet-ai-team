@@ -5,9 +5,6 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
 
-// --- ایمپورت فایل‌های جداگانه (اگر فایل‌ها را داری) ---
-// const adminRoutes = require('./routes/adminRoutes'); // 👈 اگر فایلش هست، آن‌کامنت کن
-
 // --- تنظیمات اولیه ---
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,23 +31,22 @@ const userSchema = new mongoose.Schema({
   phone: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   role: { type: String, default: 'user' },
-  tokens: { type: Number, default: 5 }, // توکن‌های شخصی
+  tokens: { type: Number, default: 5 },
   jobType: { type: String, default: 'unknown' },
   mustChangePassword: { type: Boolean, default: false }
 }, { timestamps: true });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-// 2. License Model (اضافه شد ✅)
+// 2. License Model
 const licenseSchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true },
   tokens: { type: Number, required: true },
   isActive: { type: Boolean, default: true },
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // اگر لایسنس اختصاصی است
   expiresAt: Date
 });
 const License = mongoose.models.License || mongoose.model('License', licenseSchema);
 
-// 3. KnowledgeBase Model (برای RAG)
+// 3. KnowledgeBase Model
 const kbSchema = new mongoose.Schema({
   title: String,
   content: String,
@@ -58,19 +54,17 @@ const kbSchema = new mongoose.Schema({
   subCategory: String,
   tags: [String]
 });
-// ایندکس متنی برای جستجوی سریع
-// kbSchema.index({ content: 'text', title: 'text' }); 
 const KnowledgeBase = mongoose.models.KnowledgeBase || mongoose.model('KnowledgeBase', kbSchema);
 
-// 4. ChatLog Model (کامل با فیلدهای درخواستی ✅)
+// 4. ChatLog Model
 const chatLogSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   botType: { type: String, default: 'General' },
   question: { type: String, required: true },
   answer: { type: String, required: true },
-  reference: { type: String }, // منبع دیتابیس
-  licenseUsed: { type: String }, // کد لایسنس استفاده شده
-  isFallbackResponse: { type: Boolean, default: false }, // آیا از دانش عمومی استفاده شده؟
+  reference: { type: String },
+  licenseUsed: { type: String },
+  isFallbackResponse: { type: Boolean, default: false },
   timestamp: { type: Date, default: Date.now }
 });
 const ChatLog = mongoose.models.ChatLog || mongoose.model('ChatLog', chatLogSchema);
@@ -109,6 +103,8 @@ const authenticateToken = (req, res, next) => {
 // 🌐 روت‌ها (Routes)
 // ==========================================
 
+app.get('/', (req, res) => res.send('<h1>✅ Iran Vet AI Backend is Running!</h1>'));
+
 // 1️⃣ احراز هویت (Auth)
 app.post('/api/auth/register', async (req, res) => {
   try {
@@ -117,7 +113,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     const newUser = await User.create({ fullName, email, phone, password, tokens: 5 });
     
-    // نوتیفیکیشن خوش‌آمد
     await Notification.create({ user: newUser._id, title: 'خوش آمدید', message: 'حساب شما ایجاد شد.' });
 
     const token = jwt.sign({ id: newUser._id, role: 'user' }, process.env.JWT_SECRET);
@@ -138,25 +133,22 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 // 2️⃣ چت هوشمند (RAG + License + Fallback) 🧠✅
-// این دقیقاً همان کدی است که خواسته بودی و ناقص شده بود
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
     const { message, botType, licenseCode } = req.body; 
     const userId = req.user.id;
     let user = await User.findById(userId);
 
-    // --- الف: بررسی اعتبار (لایسنس یا توکن کاربر) ---
+    // --- الف: بررسی اعتبار ---
     let activeLicense = null;
     let useUserTokens = false;
 
     if (licenseCode) {
-        // اگر کاربر کد لایسنس فرستاده
         activeLicense = await License.findOne({ code: licenseCode, isActive: true });
         if (!activeLicense || activeLicense.tokens < 1) {
             return res.status(400).json({ message: 'لایسنس نامعتبر یا فاقد اعتبار است.' });
         }
     } else {
-        // اگر لایسنس نفرستاده، از توکن شخصی استفاده کن
         if (user.tokens < 1) {
             return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است.' });
         }
@@ -164,10 +156,9 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     }
 
     // --- ب: جستجو در دیتابیس (RAG) ---
-    // جستجو بر اساس نوع ربات (category) و متن سوال
     const relatedDocs = await KnowledgeBase.find({
-        category: botType, // مثلاً 'bee'
-        content: { $regex: message, $options: 'i' } // جستجوی ساده (برای پیشرفته باید ایندکس بسازی)
+        category: botType,
+        content: { $regex: message, $options: 'i' }
     }).limit(3);
 
     let systemPrompt = "";
@@ -175,7 +166,6 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     let referenceText = "";
 
     if (relatedDocs.length > 0) {
-        // ✅ حالت اول: اطلاعات در دیتابیس هست
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         referenceText = relatedDocs.map(doc => doc.title).join(", ");
         
@@ -183,17 +173,13 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
             شما دستیار دامپزشک متخصص در زمینه ${botType} هستید.
             اطلاعات علمی تایید شده:
             ${contextData}
-            
-            دستورالعمل: فقط و فقط بر اساس اطلاعات بالا پاسخ بده. اگر در متن نبود بگو نمیدانم.
+            دستورالعمل: فقط بر اساس اطلاعات بالا پاسخ بده.
         `;
     } else {
-        // ⚠️ حالت دوم: اطلاعات نیست (Fallback)
         isFallback = true;
         referenceText = "دانش عمومی هوش مصنوعی";
-        
         systemPrompt = `
-            شما یک دستیار هوشمند دامپزشکی باتجربه هستید.
-            کاربر سوالی درباره ${botType} پرسیده که در دیتابیس اختصاصی ما موجود نیست.
+            شما یک دستیار هوشمند دامپزشکی باتجربه هستید (${botType}).
             لطفاً با تکیه بر دانش عمومی خودت به عنوان یک هوش مصنوعی پیشرفته پاسخ بده.
             پاسخ باید علمی، محتاطانه و دقیق باشد.
         `;
@@ -201,20 +187,20 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
     // --- ج: ارسال به OpenAI ---
     const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo", // یا gpt-4
+        model: "gpt-3.5-turbo",
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: message }
         ],
-        temperature: isFallback ? 0.7 : 0.3, // تنظیم خلاقیت
+        temperature: isFallback ? 0.7 : 0.3,
     });
 
     let aiAnswer = response.choices[0].message.content;
 
-    // --- د: اضافه کردن هشدار در حالت Fallback ---
+    // --- د: هشدار در حالت Fallback ---
     if (isFallback) {
-        const warningStart = "⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و از دیتابیس اختصاصی ما نیست.\n\n";
-        const warningEnd = "\n\n🔴 **هشدار:** لطفاً پیش از هرگونه اقدام درمانی، با دامپزشک مشورت کنید.";
+        const warningStart = "⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است.\n\n";
+        const warningEnd = "\n\n🔴 **هشدار:** لطفاً پیش از اقدام درمانی، با دامپزشک مشورت کنید.";
         aiAnswer = warningStart + aiAnswer + warningEnd;
     }
 
@@ -251,7 +237,18 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 });
 
 
-// 3️⃣ تیکت و نوتیفیکیشن (سایر روت‌ها)
+// 3️⃣ تاریخچه چت (فقط یک بار تعریف شده ✅)
+app.get('/api/chat/history', authenticateToken, async (req, res) => {
+    try {
+        const history = await ChatLog.find({ user: req.user.id }).sort({ timestamp: -1 });
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ message: 'خطا در دریافت تاریخچه' });
+    }
+});
+
+
+// 4️⃣ سیستم تیکت (کامل شده با روت‌های جزئیات و پاسخ ✅)
 app.post('/api/tickets', authenticateToken, async (req, res) => {
     try {
         await Ticket.create({ user: req.user.id, subject: req.body.subject, messages: [{ sender: 'user', text: req.body.message }] });
@@ -264,37 +261,27 @@ app.get('/api/tickets', authenticateToken, async (req, res) => {
     res.json(tickets);
 });
 
+// 👇 این دو روت در کد شما نبودند و برای باز کردن تیکت ضروریند
+app.get('/api/tickets/:id', authenticateToken, async (req, res) => {
+    const ticket = await Ticket.findById(req.params.id);
+    if (ticket.user.toString() !== req.user.id) return res.status(403).json({ message: 'دسترسی ندارید' });
+    res.json(ticket);
+});
+
+app.post('/api/tickets/:id/reply', authenticateToken, async (req, res) => {
+    const ticket = await Ticket.findById(req.params.id);
+    ticket.messages.push({ sender: 'user', text: req.body.text });
+    ticket.status = 'open';
+    await ticket.save();
+    res.json({ message: 'پاسخ ارسال شد' });
+});
+
+
+// 5️⃣ نوتیفیکیشن‌ها
 app.get('/api/notifications', authenticateToken, async (req, res) => {
     const notifs = await Notification.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(notifs);
 });
-
-// ✅ دریافت تاریخچه چت‌های کاربر (واقعی)
-app.get('/api/chat/history', authenticateToken, async (req, res) => {
-    try {
-        // جدیدترین‌ها اول باشند
-        const history = await ChatLog.find({ user: req.user.id }).sort({ timestamp: -1 });
-        res.json(history);
-    } catch (error) {
-        res.status(500).json({ message: 'خطا در دریافت تاریخچه' });
-    }
-});
-
-// ✅ دریافت تاریخچه چت‌های کاربر (این را به server.js اضافه کن)
-app.get('/api/chat/history', authenticateToken, async (req, res) => {
-    try {
-        // جدیدترین‌ها اول باشند
-        const history = await ChatLog.find({ user: req.user.id }).sort({ timestamp: -1 });
-        res.json(history);
-    } catch (error) {
-        res.status(500).json({ message: 'خطا در دریافت تاریخچه' });
-    }
-});
-
-
-// 4️⃣ روت‌های ادمین (اگر فایلش رو داری)
-// app.use('/api/admin', adminRoutes); 👈 این خط را وقتی فایل adminRoutes را ساختی فعال کن
-
 
 // اجرای سرور
 app.listen(PORT, () => {
