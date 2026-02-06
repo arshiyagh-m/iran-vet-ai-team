@@ -11,7 +11,7 @@ import DashboardLayout from './components/layout/DashboardLayout';
 // --- صفحات عمومی ---
 import Home from './pages/public/Home';
 import Login from './pages/auth/Login';
-// import Register from './pages/auth/Register'; // حذف شده
+// import Register from './pages/auth/Register'; // حذف شده (ادغام با لاگین)
 
 import Bots from './pages/public/Bots';
 import FAQ from './pages/public/FAQ';
@@ -24,13 +24,15 @@ import Profile from './pages/dashboard/Profile';
 import Tickets from './pages/dashboard/Tickets';
 import TicketDetail from './pages/dashboard/TicketDetail';
 import ChangePassword from './pages/dashboard/ChangePassword';
+import BotChat from './pages/dashboard/BotChat';
 
-// 👇 این صفحه را در مرحله قبل ساختیم (خیلی مهمه)
-import BotChat from './pages/dashboard/BotChat'; 
+// 👇👇 ایمپورت صفحه جدید خرید توکن
+import BuyTokens from './pages/dashboard/BuyTokens'; 
 
 const App = () => {
   const { pathname } = useLocation();
 
+  // اسکرول به بالا هنگام تغییر صفحه
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
@@ -54,14 +56,17 @@ const App = () => {
         {/* ۲. پنل کاربری */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<Overview />} />
+          
+          {/* 👇 مسیر جدید خرید توکن */}
+          <Route path="buy-tokens" element={<BuyTokens />} />
+
           <Route path="history" element={<History />} />
           <Route path="profile" element={<Profile />} />
           <Route path="tickets" element={<Tickets />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="change-password" element={<ChangePassword />} />
           
-          {/* 👇 مسیر جدید برای چت‌بات‌ها */}
-          {/* علامت :type یعنی این قسمت متغیر است (مثلا chat/bee یا chat/dog) */}
+          {/* مسیر چت‌بات‌ها */}
           <Route path="chat/:type" element={<BotChat />} />
         </Route>
 
