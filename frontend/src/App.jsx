@@ -12,6 +12,10 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import Home from './pages/public/Home';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+// 👇 صفحات جدید ایمپورت شدند
+import Bots from './pages/public/Bots';
+import FAQ from './pages/public/FAQ';
+import Terms from './pages/public/Terms';
 
 // --- صفحات پنل کاربری ---
 import Overview from './pages/dashboard/Overview';
@@ -28,16 +32,18 @@ const App = () => {
       
       <Routes>
         
-        {/* ۱. صفحات عمومی */}
+        {/* ۱. صفحات عمومی (با هدر و فوتر) */}
         <Route path="/" element={<><Header /><Home /><Footer /></>} />
+        <Route path="/bots" element={<><Header /><Bots /><Footer /></>} />  {/* صفحه جدید */}
+        <Route path="/faq" element={<><Header /><FAQ /><Footer /></>} />    {/* صفحه جدید */}
+        <Route path="/terms" element={<><Header /><Terms /><Footer /></>} /> {/* صفحه جدید */}
+        
         <Route path="/login" element={<><Header /><Login /><Footer /></>} />
         <Route path="/register" element={<><Header /><Register /><Footer /></>} />
 
         {/* ۲. پنل کاربری */}
         <Route path="/dashboard" element={<DashboardLayout />}>
-          {/* 👇 این خط یعنی صفحه اصلی داشبورد همان Overview است */}
           <Route index element={<Overview />} />
-          
           <Route path="history" element={<History />} />
           <Route path="profile" element={<Profile />} />
           <Route path="tickets" element={<Tickets />} />
