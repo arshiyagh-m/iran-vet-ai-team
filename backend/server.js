@@ -280,6 +280,16 @@ app.get('/api/chat/history', authenticateToken, async (req, res) => {
     }
 });
 
+// ✅ دریافت تاریخچه چت‌های کاربر (این را به server.js اضافه کن)
+app.get('/api/chat/history', authenticateToken, async (req, res) => {
+    try {
+        // جدیدترین‌ها اول باشند
+        const history = await ChatLog.find({ user: req.user.id }).sort({ timestamp: -1 });
+        res.json(history);
+    } catch (error) {
+        res.status(500).json({ message: 'خطا در دریافت تاریخچه' });
+    }
+});
 
 
 // 4️⃣ روت‌های ادمین (اگر فایلش رو داری)
