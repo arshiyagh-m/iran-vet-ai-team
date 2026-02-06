@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
-import { FaCoins, FaCreditCard, FaTelegram, FaWhatsapp, FaCopy, FaCheckCircle, FaHeadset } from 'react-icons/fa';
+// 👇 اصلاح: FaArrowRight به لیست ایمپورت‌ها اضافه شد
+import { FaCoins, FaCreditCard, FaTelegram, FaWhatsapp, FaCopy, FaCheckCircle, FaHeadset, FaArrowRight } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const BuyTokens = () => {
-  // اطلاعات کارت بانکی (اینجا اطلاعات خودت رو بذار)
+  // اطلاعات کارت بانکی
   const bankInfo = {
     cardNumber: '6037-9979-0000-0000',
     ownerName: 'ارشیا قنبری میاندوآب',
     bankName: 'بانک ملی'
   };
 
-  // لیست بسته‌های پیشنهادی
   const packages = [
     { id: 1, tokens: 10, price: '۵۰,۰۰۰', label: 'بسته پایه', color: 'bg-blue-500', isPopular: false },
     { id: 2, tokens: 50, price: '۲۰۰,۰۰۰', label: 'بسته اقتصادی', color: 'bg-purple-600', isPopular: true },
     { id: 3, tokens: 100, price: '۳۵۰,۰۰۰', label: 'بسته حرفه‌ای', color: 'bg-amber-500', isPopular: false },
   ];
 
-  // تابع کپی کردن شماره کارت
   const copyToClipboard = () => {
     navigator.clipboard.writeText(bankInfo.cardNumber.replace(/-/g, ''));
     toast.success('شماره کارت کپی شد! ✅');
@@ -38,7 +37,6 @@ const BuyTokens = () => {
             فعلاً پرداخت فقط از طریق کارت‌به‌کارت امکان‌پذیر است.
           </p>
         </div>
-        {/* المان‌های تزئینی پس‌زمینه */}
         <div className="absolute top-0 left-0 w-32 h-32 bg-yellow-500/20 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
       </div>
