@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
 const fs = require('fs'); // اضافه شده برای خواندن فایل
 const path = require('path'); // اضافه شده برای آدرس‌دهی فایل
+const adminRoutes = require('./routes/adminRoutes');
+
 
 // --- تنظیمات اولیه ---
 const app = express();
@@ -420,6 +422,10 @@ app.get('/api/setup/import-bee', async (req, res) => {
         res.status(500).json({ message: 'خطا در ایمپورت: ' + error.message });
     }
 });
+
+
+// روت‌های ادمین
+app.use('/api/admin', adminRoutes);
 
 
 // اجرای سرور
