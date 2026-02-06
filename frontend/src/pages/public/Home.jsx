@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaDog, FaCat, FaStethoscope, FaUserMd, FaLaptopCode, FaChartLine } from 'react-icons/fa';
+// 👇 اصلاح: FaHeadset را اینجا اضافه کردم و FaStethoscope و بقیه را مرتب کردم
+import { FaArrowLeft, FaDog, FaCat, FaStethoscope, FaUserMd, FaLaptopCode, FaChartLine, FaRobot, FaHeadset } from 'react-icons/fa';
 
 const Home = () => {
   // دیتای تیم
@@ -31,11 +32,10 @@ const Home = () => {
       name: 'سارا احمدی',
       role: 'پشتیبانی فنی',
       desc: 'مسئول ارتباط با مشتریان و حل مشکلات فنی کاربران.',
-      icon: <FaHeadset />
+      icon: <FaHeadset /> // 👈 الان این از ایمپورت بالا خوانده می‌شود و خطا نمی‌دهد
     }
   ];
 
-  // دیتای ربات‌های محبوب
   const popularBots = [
     { id: 1, name: 'دستیار سگ‌ها', icon: <FaDog />, desc: 'تشخیص بیماری‌های نژادهای مختلف سگ' },
     { id: 2, name: 'دستیار گربه‌ها', icon: <FaCat />, desc: 'مشاوره تغذیه و سلامت گربه‌های خانگی' },
@@ -43,18 +43,11 @@ const Home = () => {
     { id: 4, name: 'طیور صنعتی', icon: <FaChartLine />, desc: 'بهینه‌سازی رشد و پیشگیری از بیماری طیور' },
   ];
 
-  // آیکون هدست چون بالا استفاده شده ولی ایمپورت نشده بود دستی تعریف میکنیم
-  function FaHeadset(props) {
-    return <svg stroke="currentColor" fill="currentColor" strokeWidth="0" viewBox="0 0 512 512" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" {...props}><path d="M192 208c0-17.67-14.33-32-32-32h-16c-35.35 0-64 28.65-64 64v48c0 35.35 28.65 64 64 64h16c17.67 0 32-14.33 32-32V208zm176 144c35.35 0 64-28.65 64-64v-48c0-35.35-28.65-64-64-64h-16c-17.67 0-32 14.33-32 32v112c0 17.67 14.33 32 32 32h16zM256 0C113.18 0 4.6 113.57 0 256v112c0 8.84 7.16 16 16 16h80c8.84 0 16-7.16 16-16v-144c0-8.84-7.16-16-16-16h-63.46C38.29 123.83 137.69 32 256 32s217.71 91.83 223.46 208H416c-8.84 0-16 7.16-16 16v144c0 8.84 7.16 16 16 16h80c8.84 0 16-7.16 16-16V256C491.4 113.57 398.82 0 256 0z"></path></svg>;
-  }
-
-
   return (
     <div className="bg-white">
       
-      {/* ۱. بخش Hero (معرفی) */}
+      {/* ۱. بخش Hero */}
       <section className="relative bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white py-24 md:py-32 overflow-hidden">
-        {/* دایره‌های پس‌زمینه */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4"></div>
 
@@ -79,7 +72,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ۲. بخش درباره ما و توضیحات */}
+      {/* ۲. بخش توضیحات */}
       <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="max-w-3xl mx-auto text-center mb-16">
@@ -152,18 +145,20 @@ const Home = () => {
                 </div>
                 <h3 className="font-bold text-lg mb-2">{bot.name}</h3>
                 <p className="text-slate-400 text-sm mb-4">{bot.desc}</p>
-                <Link to="/dashboard/chat" className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                  شروع گفتگو <FaArrowLeft size={12} />
+                {/* هدایت به تیکت‌ها چون چت حذف شد */}
+                <Link to="/dashboard/tickets" className="text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                  شروع مشاوره <FaArrowLeft size={12} />
                 </Link>
               </div>
             ))}
           </div>
-
-          <div className="mt-8 text-center md:hidden">
+          
+           <div className="mt-8 text-center md:hidden">
             <Link to="/bots" className="inline-flex items-center gap-2 text-blue-400 font-bold">
               مشاهده همه ربات‌ها <FaArrowLeft />
             </Link>
           </div>
+
         </div>
       </section>
 
