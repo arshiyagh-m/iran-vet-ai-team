@@ -132,14 +132,26 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 
-// 2️⃣ چت هوشمند (RAG + License + Fallback) 🧠✅
+// 2️⃣ چت هوشمند (RAG + License + Fallback + Smart Deduction) 🧠✅✅
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
     const { message, botType, licenseCode } = req.body; 
     const userId = req.user.id;
     let user = await User.findById(userId);
 
-    // --- الف: بررسی اعتبار ---
+    // --- گام صفر: بررسی سلام و احوال‌پرسی (رایگان) ---
+    const greetings = ['سلام', 'درود', 'خسته نباشید', 'چطوری', 'خوبی', 'صبح بخیر', 'شب بخیر', 'hi', 'hello'];
+    const isGreeting = greetings.some(g => message.trim().toLowerCase().startsWith(g)) && message.length < 30;
+
+    if (isGreeting) {
+        return res.json({ 
+            response: `سلام! من دستیار هوشمند ${botType === 'general' ? 'دامپزشکی' : botType} هستم. چطور می‌توانم در زمینه تخصصی به شما کمک کنم؟`, 
+            remainingTokens: user.tokens, // کسر نمی‌شود
+            isFallback: false 
+        });
+    }
+
+    // --- گام یک: بررسی اعتبار کاربر ---
     let activeLicense = null;
     let useUserTokens = false;
 
@@ -155,7 +167,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         useUserTokens = true;
     }
 
-    // --- ب: جستجو در دیتابیس (RAG) ---
+    // --- گام دو: جستجو در دیتابیس (RAG) ---
     const relatedDocs = await KnowledgeBase.find({
         category: botType,
         content: { $regex: message, $options: 'i' }
@@ -164,56 +176,74 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     let systemPrompt = "";
     let isFallback = false;
     let referenceText = "";
+    let shouldDeductToken = true; // پیش‌فرض توکن کسر می‌شود مگر اینکه نامرتبط باشد
 
     if (relatedDocs.length > 0) {
+        // ✅ حالت اول: اطلاعات در دیتابیس هست
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         referenceText = relatedDocs.map(doc => doc.title).join(", ");
         
         systemPrompt = `
-            شما دستیار دامپزشک متخصص در زمینه ${botType} هستید.
-            اطلاعات علمی تایید شده:
+            شما دستیار دامپزشک متخصص در زمینه "${botType}" هستید.
+            اطلاعات علمی تایید شده زیر را بخوانید:
             ${contextData}
-            دستورالعمل: فقط بر اساس اطلاعات بالا پاسخ بده.
+            
+            دستورالعمل: فقط و فقط بر اساس اطلاعات بالا به سوال کاربر پاسخ بده.
         `;
     } else {
+        // ⚠️ حالت دوم: اطلاعات نیست (Fallback) -> باید چک کنیم سوال مرتبط است یا نه
         isFallback = true;
         referenceText = "دانش عمومی هوش مصنوعی";
+        
         systemPrompt = `
-            شما یک دستیار هوشمند دامپزشکی باتجربه هستید (${botType}).
-            لطفاً با تکیه بر دانش عمومی خودت به عنوان یک هوش مصنوعی پیشرفته پاسخ بده.
-            پاسخ باید علمی، محتاطانه و دقیق باشد.
+            شما یک متخصص دامپزشکی در زمینه "${botType}" هستید.
+            
+            دستورالعمل بسیار مهم:
+            1. ابتدا بررسی کن آیا سوال کاربر مستقیماً به "${botType}" یا سلامت حیوانات مرتبط است؟
+            2. اگر سوال درباره سیاست، ورزش، قیمت دلار، برنامه‌نویسی یا مسائل غیرمرتبط بود، فقط بگو: "OUT_OF_SCOPE".
+            3. اگر سوال مرتبط بود ولی در دیتابیس نبود، با تکیه بر دانش عمومی دامپزشکی پاسخ بده.
+            4. پاسخ باید علمی، محتاطانه و دقیق باشد.
         `;
     }
 
-    // --- ج: ارسال به OpenAI ---
+    // --- گام سه: ارسال به OpenAI ---
     const response = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: message }
         ],
-        temperature: isFallback ? 0.7 : 0.3,
+        temperature: isFallback ? 0.5 : 0.2,
     });
 
     let aiAnswer = response.choices[0].message.content;
 
-    // --- د: هشدار در حالت Fallback ---
-    if (isFallback) {
-        const warningStart = "⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است.\n\n";
-        const warningEnd = "\n\n🔴 **هشدار:** لطفاً پیش از اقدام درمانی، با دامپزشک مشورت کنید.";
+    // --- گام چهار: پردازش پاسخ ---
+    if (aiAnswer.includes("OUT_OF_SCOPE")) {
+        // سوال نامرتبط بود
+        aiAnswer = `من ربات تخصصی ${botType} هستم و نمی‌توانم به سوالات خارج از این حیطه پاسخ دهم. لطفاً سوال مرتبط بپرسید.`;
+        shouldDeductToken = false; // ❌ توکن کسر نمی‌شود
+        isFallback = false; // نیازی به هشدار نیست
+    } 
+    else if (isFallback) {
+        // سوال مرتبط بود اما از دانش عمومی پاسخ داده شد
+        const warningStart = "⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و هنوز در دیتابیس اختصاصی ما تایید نشده است.\n\n";
+        const warningEnd = "\n\n🔴 **هشدار:** لطفاً پیش از هرگونه اقدام درمانی، با دامپزشک مشورت کنید.";
         aiAnswer = warningStart + aiAnswer + warningEnd;
     }
 
-    // --- ه: کسر اعتبار ---
-    if (useUserTokens) {
-        user.tokens -= 1;
-        await user.save();
-    } else if (activeLicense) {
-        activeLicense.tokens -= 1;
-        await activeLicense.save();
+    // --- گام پنج: کسر اعتبار (فقط در صورت لزوم) ---
+    if (shouldDeductToken) {
+        if (useUserTokens) {
+            user.tokens -= 1;
+            await user.save();
+        } else if (activeLicense) {
+            activeLicense.tokens -= 1;
+            await activeLicense.save();
+        }
     }
 
-    // --- و: ذخیره لاگ ---
+    // --- گام شش: ذخیره لاگ ---
     await ChatLog.create({
         user: userId,
         botType: botType,
@@ -221,12 +251,12 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         answer: aiAnswer,
         reference: referenceText,
         licenseUsed: licenseCode || 'UserTokens',
-        isFallbackResponse: isFallback
+        isFallbackResponse: isFallback && shouldDeductToken
     });
 
     res.json({ 
         response: aiAnswer, 
-        remainingTokens: useUserTokens ? user.tokens : activeLicense.tokens,
+        remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
         isFallback 
     });
 
@@ -237,7 +267,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 });
 
 
-// 3️⃣ تاریخچه چت (فقط یک بار تعریف شده ✅)
+// 3️⃣ تاریخچه چت
 app.get('/api/chat/history', authenticateToken, async (req, res) => {
     try {
         const history = await ChatLog.find({ user: req.user.id }).sort({ timestamp: -1 });
@@ -248,7 +278,7 @@ app.get('/api/chat/history', authenticateToken, async (req, res) => {
 });
 
 
-// 4️⃣ سیستم تیکت (کامل شده با روت‌های جزئیات و پاسخ ✅)
+// 4️⃣ سیستم تیکت
 app.post('/api/tickets', authenticateToken, async (req, res) => {
     try {
         await Ticket.create({ user: req.user.id, subject: req.body.subject, messages: [{ sender: 'user', text: req.body.message }] });
@@ -261,7 +291,6 @@ app.get('/api/tickets', authenticateToken, async (req, res) => {
     res.json(tickets);
 });
 
-// 👇 این دو روت در کد شما نبودند و برای باز کردن تیکت ضروریند
 app.get('/api/tickets/:id', authenticateToken, async (req, res) => {
     const ticket = await Ticket.findById(req.params.id);
     if (ticket.user.toString() !== req.user.id) return res.status(403).json({ message: 'دسترسی ندارید' });
