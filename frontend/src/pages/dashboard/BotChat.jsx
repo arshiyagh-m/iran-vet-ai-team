@@ -6,9 +6,8 @@ import {
 } from 'react-icons/fa';
 import client from '../../api/client';
 
-// تنظیمات تم برای هر ربات (کامل شده)
+// تنظیمات تم برای هر ربات
 const botConfig = {
-  // 🐝 زنبور عسل
   bee: {
     name: 'هوش مصنوعی زنبور عسل',
     icon: <FaForumbee />, 
@@ -17,7 +16,6 @@ const botConfig = {
     userMsgColor: 'bg-amber-600',
     welcome: 'سلام! من دستیار تخصصی زنبورداری هستم. درباره بیماری‌های کندو، تولید عسل یا ملکه سوالی دارید؟ 🐝',
   },
-  // 🐕 سگ
   dog: {
     name: 'دستیار سگ‌ها',
     icon: <FaDog />,
@@ -26,7 +24,6 @@ const botConfig = {
     userMsgColor: 'bg-orange-600',
     welcome: 'هاپ! من متخصص سگ‌ها هستم. درباره نژاد، تغذیه یا بیماری سگتون بپرسید. 🐕',
   },
-  // 🐈 گربه
   cat: {
     name: 'دستیار گربه‌ها',
     icon: <FaCat />,
@@ -35,7 +32,6 @@ const botConfig = {
     userMsgColor: 'bg-blue-600',
     welcome: 'میو! من متخصص گربه‌ها هستم. چطور می‌تونم به پیشی ملوس شما کمک کنم؟ 🐈',
   },
-  // 🐄 گاو (دام بزرگ)
   cow: {
     name: 'دستیار دام بزرگ',
     icon: <FaPaw />,
@@ -44,7 +40,6 @@ const botConfig = {
     userMsgColor: 'bg-green-700',
     welcome: 'سلام. من در زمینه مدیریت گاوداری، ورم پستان و تغذیه دام شیری تخصص دارم. 🐄',
   },
-  // 🐎 اسب
   horse: {
     name: 'دستیار اسب و تک‌سمیان',
     icon: <FaStethoscope />,
@@ -53,7 +48,6 @@ const botConfig = {
     userMsgColor: 'bg-yellow-700',
     welcome: 'سلام. من متخصص بیماری‌ها و نگهداری اسب هستم. سوالی درباره لنگش یا قولنج دارید؟ 🐎',
   },
-  // 🐓 طیور
   poultry: {
     name: 'دستیار طیور صنعتی',
     icon: <FaFeather />,
@@ -62,7 +56,6 @@ const botConfig = {
     userMsgColor: 'bg-red-600',
     welcome: 'سلام. در زمینه مدیریت مرغداری گوشتی و تخم‌گذار و بیماری‌های طیور در خدمتم. 🐓',
   },
-  // 🐟 آبزیان
   fish: {
     name: 'دستیار آبزیان',
     icon: <FaFish />,
@@ -71,7 +64,6 @@ const botConfig = {
     userMsgColor: 'bg-cyan-700',
     welcome: 'سلام. سوالات مربوط به پرورش ماهی سردآبی و گرم‌آبی را از من بپرسید. 🐟',
   },
-  // 🤖 پیش‌فرض
   default: {
     name: 'دستیار عمومی',
     icon: <FaRobot />,
@@ -83,7 +75,7 @@ const botConfig = {
 };
 
 const BotChat = () => {
-  const { type } = useParams(); // گرفتن نوع ربات از آدرس URL
+  const { type } = useParams();
   const navigate = useNavigate();
   const endRef = useRef(null);
   
@@ -91,15 +83,12 @@ const BotChat = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // انتخاب تنظیمات بر اساس نوع ربات (اگر پیدا نشد، دیفالت را نشان بده)
   const currentBot = botConfig[type] || botConfig.default;
 
-  // وقتی نوع ربات عوض شد، پیام‌ها ریست شوند و پیام خوش‌آمد جدید بیاید
   useEffect(() => {
     setMessages([{ role: 'bot', text: currentBot.welcome }]);
   }, [type]);
 
-  // اسکرول خودکار به پایین
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -109,40 +98,46 @@ const BotChat = () => {
     if (!input.trim()) return;
 
     const userText = input;
-    setInput(''); // خالی کردن اینپوت
+    setInput(''); 
     
-    // ۱. اضافه کردن پیام کاربر به لیست
     setMessages(prev => [...prev, { role: 'user', text: userText }]);
     setLoading(true);
 
-  try {
-      // ارسال درخواست به سرور
+    try {
       const res = await client.post('/chat', {
         message: userText,
         botType: type 
       });
 
-      // الف: نمایش جواب ربات
       setMessages(prev => [...prev, { role: 'bot', text: res.data.response }]);
 
-      // ب: 👇👇 آپدیت فوری توکن در مرورگر (مشکل کم نشدن توکن حل شد)
+      // ✅ کد اصلاح شده برای آپدیت توکن (همان کدی که باعث خطا شده بود، الان درست جاگذاری شده)
       if (res.data.remainingTokens !== undefined) {
         const currentUser = JSON.parse(localStorage.getItem('user'));
-        const updatedUser = { ...currentUser, tokens: res.data.remainingTokens };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        
-        // این خط باعث میشه هدر سایت بفهمه توکن عوض شده
-        window.dispatchEvent(new Event("storage"));
+        if (currentUser) {
+            const updatedUser = { ...currentUser, tokens: res.data.remainingTokens };
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+            window.dispatchEvent(new Event("storage"));
+        }
       }
 
     } catch (error) {
-       // ... (بقیه کد خطا مثل قبل)
+      console.error("Chat Error:", error);
+      
+      let errorMsg = 'خطا در ارتباط با سرور. لطفاً دوباره تلاش کنید.';
+      if (error.response && error.response.status === 403) {
+        errorMsg = 'اعتبار توکن شما تمام شده است. لطفاً حساب خود را شارژ کنید.';
+      }
 
+      setMessages(prev => [...prev, { role: 'bot', text: errorMsg, isError: true }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] bg-white rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
       
-      {/* 1. هدر اختصاصی */}
       <div className={`${currentBot.themeColor} p-4 flex items-center gap-4 text-white shadow-md z-10 transition-colors duration-300`}>
         <button onClick={() => navigate('/bots')} className="p-2 hover:bg-white/20 rounded-full transition">
           <FaArrowRight />
@@ -153,12 +148,11 @@ const BotChat = () => {
         <div>
           <h2 className="font-bold text-lg">{currentBot.name}</h2>
           <span className="text-xs text-white/90 flex items-center gap-1 font-medium">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span> آنلاین و آماده پاسخگویی
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span> آنلاین
           </span>
         </div>
       </div>
 
-      {/* 2. محیط چت */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -184,7 +178,6 @@ const BotChat = () => {
         <div ref={endRef} />
       </div>
 
-      {/* 3. ورودی متن */}
       <div className="p-4 bg-white border-t border-gray-100">
         <form onSubmit={handleSend} className="relative flex items-center gap-2">
           <input 
