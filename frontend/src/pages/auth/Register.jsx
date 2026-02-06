@@ -1,53 +1,46 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaUserPlus, FaNetworkWired } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaPhone, FaLock, FaUserPlus, FaHome, FaArrowRight } from 'react-icons/fa';
 import client from '../../api/client';
+// 👇 لوگو را ایمپورت می‌کنیم
+import logo from '../../assets/logo.png';
 
 const Register = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [debugMsg, setDebugMsg] = useState(''); // برای نمایش متن خطا روی صفحه
+  
+  // 👇 استیت جدید برای چک‌باکس قوانین
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
   const [formData, setFormData] = useState({
     fullName: '',
-    phone: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: ''
   });
 
-  // --- دکمه تست اتصال (جدید) ---
-  const checkConnection = async () => {
-    setDebugMsg('در حال تست اتصال به سرور...');
-    try {
-      // تلاش برای گرفتن پاسخ از سرور
-      const res = await client.get('/'); 
-      toast.success('✅ اتصال به سرور برقرار است!');
-      setDebugMsg(`✅ سرور پاسخ داد: ${res.data || 'OK'}`);
-    } catch (error) {
-      console.error(error);
-      if (error.code === 'ERR_NETWORK') {
-        toast.error('❌ خطای شبکه: فرانت‌اند نمی‌تواند سرور را ببیند.');
-        setDebugMsg('❌ خطای نتورک (ERR_NETWORK): آدرس در client.js اشتباه است یا سرور خاموش است.');
-      } else {
-        toast.error('❌ خطا در اتصال');
-        setDebugMsg(`❌ خطا: ${error.message} (Status: ${error.response?.status})`);
-      }
-    }
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setDebugMsg(''); // پاک کردن پیام‌های قبلی
-    
+
+    // ۱. بررسی تطابق رمز عبور
     if (formData.password !== formData.confirmPassword) {
-      return toast.error('رمز عبور و تکرار آن مطابقت ندارند');
+      return toast.error('رمز عبور و تکرار آن مطابقت ندارند.');
+    }
+
+    // ۲. بررسی تیک قوانین (مهم)
+    if (!acceptedTerms) {
+        return toast.warn('لطفاً قوانین و مقررات را مطالعه و تأیید کنید.');
     }
 
     setLoading(true);
 
     try {
-      // ارسال درخواست ثبت نام
       const res = await client.post('/auth/register', {
         fullName: formData.fullName,
         email: formData.email,
@@ -55,131 +48,126 @@ const Register = () => {
         password: formData.password
       });
 
-      toast.success('ثبت نام موفقیت‌آمیز بود! 🎉');
-      navigate('/login');
-      
-    } catch (error) {
-      console.error("Register Error:", error);
-      
-      // --- تحلیل دقیق خطا ---
-      let errorText = "خطای ناشناخته";
-      
-      if (error.code === 'ERR_NETWORK') {
-        errorText = "⛔ خطای شبکه: به سرور وصل نشدم. (آدرس client.js را چک کن)";
-      } else if (error.response) {
-        // سرور جواب داده ولی با ارور (مثلا 400 یا 500)
-        errorText = `⚠️ خطای سرور (${error.response.status}): ${error.response.data.message}`;
-      } else {
-        errorText = `❌ خطا: ${error.message}`;
-      }
+      // ذخیره و هدایت
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
 
-      setDebugMsg(errorText); // نمایش خطا زیر دکمه
-      toast.error(errorText);
+      toast.success(`ثبت نام موفقیت‌آمیز بود. خوش آمدید ${res.data.user.name} 👋`);
+      navigate('/dashboard');
+
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || 'خطا در ثبت نام.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-10">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+    <div className="min-h-[90vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-3xl shadow-xl border border-gray-100 relative">
         
-        <div className="flex justify-center mb-6">
-          <div className="w-16 h-16 bg-brand-green rounded-2xl flex items-center justify-center text-white text-3xl">
-            <FaUserPlus />
+        {/* دکمه بازگشت به خانه (بالا) */}
+        <Link to="/" className="absolute top-6 right-6 text-gray-400 hover:text-blue-600 transition" title="بازگشت به صفحه اصلی">
+            <FaHome size={22} />
+        </Link>
+
+        <div className="text-center">
+          {/* لوگو */}
+          <div className="flex justify-center mb-4">
+              <img src={logo} alt="Logo" className="h-16 w-auto object-contain" />
           </div>
+
+          <h2 className="mt-2 text-3xl font-extrabold text-gray-900">ایجاد حساب کاربری</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            قبلاً ثبت نام کرده‌اید؟{' '}
+            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 transition">
+              وارد شوید
+            </Link>
+          </p>
         </div>
 
-        <h2 className="text-2xl font-bold text-center text-brand-navy mb-4">ایجاد حساب جدید</h2>
-
-        {/* --- دکمه تست عیب‌یابی --- */}
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-center">
-          <p className="text-xs text-yellow-800 mb-2">اگر ثبت نام کار نمی‌کند، اول دکمه زیر را بزنید:</p>
-          <button 
-            type="button"
-            onClick={checkConnection}
-            className="flex items-center justify-center gap-2 mx-auto px-4 py-2 bg-yellow-500 text-white text-sm rounded-lg hover:bg-yellow-600 transition"
-          >
-            <FaNetworkWired /> تست اتصال به سرور
-          </button>
-          {debugMsg && (
-            <div className="mt-3 p-2 bg-black text-green-400 text-xs text-left rounded overflow-x-auto dir-ltr font-mono">
-              {debugMsg}
+        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
+          
+          {/* نام کامل */}
+          <div className="relative">
+            <div className="relative">
+              <input name="fullName" type="text" required className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="نام و نام خانوادگی" value={formData.fullName} onChange={handleChange} />
+              <FaUser className="absolute left-3 top-3.5 text-gray-400" />
             </div>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">نام و نام خانوادگی</label>
-            <input 
-              type="text"
-              required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-green focus:ring-2 focus:ring-green-100 outline-none transition"
-              value={formData.fullName}
-              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">شماره موبایل</label>
-            <input 
-              type="tel"
-              required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-green focus:ring-2 focus:ring-green-100 outline-none transition"
-              placeholder="0912..."
-              value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-            />
+          {/* ایمیل */}
+          <div className="relative">
+            <div className="relative">
+              <input name="email" type="email" required className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition dir-ltr text-left" placeholder="example@mail.com" value={formData.email} onChange={handleChange} />
+              <FaEnvelope className="absolute left-3 top-3.5 text-gray-400" />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">ایمیل</label>
-            <input 
-              type="email"
-              required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-green focus:ring-2 focus:ring-green-100 outline-none transition"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-            />
+          {/* موبایل */}
+          <div className="relative">
+            <div className="relative">
+              <input name="phone" type="tel" required className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition dir-ltr text-left" placeholder="0912..." value={formData.phone} onChange={handleChange} />
+              <FaPhone className="absolute left-3 top-3.5 text-gray-400" />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">رمز عبور</label>
-            <input 
-              type="password"
-              required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-green focus:ring-2 focus:ring-green-100 outline-none transition"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-            />
+          {/* رمز عبور */}
+          <div className="relative">
+            <div className="relative">
+              <input name="password" type="password" required className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition dir-ltr text-left" placeholder="رمز عبور" value={formData.password} onChange={handleChange} />
+              <FaLock className="absolute left-3 top-3.5 text-gray-400" />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">تکرار رمز عبور</label>
-            <input 
-              type="password"
-              required
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-brand-green focus:ring-2 focus:ring-green-100 outline-none transition"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-            />
+          {/* تکرار رمز */}
+          <div className="relative">
+            <div className="relative">
+              <input name="confirmPassword" type="password" required className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition dir-ltr text-left" placeholder="تکرار رمز عبور" value={formData.confirmPassword} onChange={handleChange} />
+              <FaLock className="absolute left-3 top-3.5 text-gray-400" />
+            </div>
           </div>
 
-          <button 
-            type="submit" 
+          {/* 👇 قسمت جدید: چک‌باکس قوانین */}
+          <div className="flex items-start gap-3 py-2 px-1">
+            <div className="flex items-center h-5">
+              <input
+                id="terms"
+                name="terms"
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+              />
+            </div>
+            <div className="text-sm">
+              <label htmlFor="terms" className="font-medium text-gray-700 cursor-pointer select-none">
+                من <Link to="/terms" target="_blank" className="text-blue-600 hover:underline font-bold">قوانین و مقررات</Link> سایت را مطالعه کرده و می‌پذیرم.
+              </label>
+            </div>
+          </div>
+
+          <button
+            type="submit"
             disabled={loading}
-            className="w-full bg-brand-green text-white py-3.5 rounded-xl font-bold hover:bg-green-700 transition shadow-lg shadow-green-900/20 mt-4"
+            className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white transition-all
+              ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-800 shadow-lg shadow-blue-900/30'}
+            `}
           >
-            {loading ? 'در حال ثبت...' : 'ثبت نام و شروع'}
+            <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+              <FaUserPlus className={`${loading ? 'hidden' : 'h-5 w-5 text-blue-300 group-hover:text-blue-100'}`} />
+            </span>
+            {loading ? 'در حال ثبت نام...' : 'ثبت نام نهایی'}
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-500">
-          قبلاً ثبت نام کرده‌اید؟ 
-          <Link to="/login" className="text-brand-navy font-bold mr-1 hover:underline">
-            وارد شوید
-          </Link>
+        {/* دکمه بازگشت به خانه (پایین) */}
+        <div className="text-center mt-6 pt-6 border-t border-gray-100">
+            <Link to="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-slate-900 font-medium transition">
+                <FaArrowRight size={14} />
+                بازگشت به صفحه اصلی سایت
+            </Link>
         </div>
 
       </div>
