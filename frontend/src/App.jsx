@@ -33,6 +33,7 @@ import AdminKnowledge from './pages/admin/AdminKnowledge';
 // 👇👇 ایمپورت‌های جدید برای تکمیل پنل ادمین
 import AdminChatLogs from './pages/admin/AdminChatLogs';
 import AdminTickets from './pages/admin/AdminTickets';
+import AdminFinance from './pages/admin/AdminFinance';
 
 const App = () => {
   const { pathname } = useLocation();
@@ -78,6 +79,7 @@ const App = () => {
           {/* 👇 مسیرهای اضافه شده: */}
           <Route path="chats" element={<AdminChatLogs />} />   {/* مانیتورینگ چت‌ها */}
           <Route path="tickets" element={<AdminTickets />} />  {/* مدیریت تیکت‌ها */}
+          <Route path="finance" element={<AdminFinance />} />
         </Route>
 
         {/* ۴. صفحه ۴۰۴ */}
