@@ -1,18 +1,15 @@
 const mongoose = require('mongoose');
 
 const ticketSchema = new mongoose.Schema({
-  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  subject: { type: String, required: true },
-  status: { type: String, enum: ['open', 'pending', 'closed'], default: 'open' },
-  
-  // 👇 تغییر ساختار به آرایه‌ای از پیام‌ها برای چت دوطرفه
-  messages: [{
-    sender: { type: String, enum: ['user', 'admin'], required: true },
-    text: { type: String, required: true },
-    createdAt: { type: Date, default: Date.now }
-  }],
-  
-  createdAt: { type: Date, default: Date.now }
-});
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  subject: String,
+  status: { type: String, default: 'open' },
+  messages: [{ 
+      sender: String, 
+      text: String, 
+      createdAt: { type: Date, default: Date.now } 
+  }]
+}, { timestamps: true });
 
-module.exports = mongoose.model('Ticket', ticketSchema);
+// این خط جلوی ارور OverwriteModelError را می‌گیرد
+module.exports = mongoose.models.Ticket || mongoose.model('Ticket', ticketSchema);
