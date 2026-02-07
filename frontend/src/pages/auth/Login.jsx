@@ -63,12 +63,24 @@ const Login = () => {
     try {
       const res = await client.post(endpoint, payload);
 
-      // ذخیره توکن و هدایت
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
+      // ✅ اصلاح مهم: ترکیب اطلاعات کاربر و توکن در یک آبجکت
+      const userData = {
+        ...res.data.user,    // نام، ایمیل، نقش و...
+        token: res.data.token // توکن هم اینجا اضافه شد تا AdminRoute ببیند
+      };
 
-      toast.success(isLoginMode ? `خوش آمدید ${res.data.user.name} 👋` : 'حساب کاربری با موفقیت ساخته شد 🎉');
-      navigate('/dashboard');
+      // ذخیره در LocalStorage
+      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('token', res.data.token); // محض احتیاط جدا هم نگه می‌داریم
+
+      toast.success(isLoginMode ? `خوش آمدید ${res.data.user.name || 'کاربر عزیز'} 👋` : 'حساب کاربری با موفقیت ساخته شد 🎉');
+      
+      // ✅ اصلاح مسیر هدایت: اگر ادمین بود بره پنل ادمین، وگرنه داشبورد
+      if (res.data.user.role === 'admin') {
+          navigate('/admin');
+      } else {
+          navigate('/dashboard');
+      }
 
     } catch (error) {
       console.error(error);
