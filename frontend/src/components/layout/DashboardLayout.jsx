@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   FaHome, FaHistory, FaUser, FaSignOutAlt, FaBars, FaTimes, 
-  FaHeadset, FaBell, FaCircle, FaCoins, FaKey 
+  FaHeadset, FaBell, FaCircle, FaCoins, FaKey, FaUserShield 
 } from 'react-icons/fa';
 import client from '../../api/client';
 import { toast } from 'react-toastify';
@@ -19,19 +19,16 @@ const DashboardLayout = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // اطلاعات کاربر از لوکال استوریج
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
           setUser(parsed);
           
-          // اجبار به تغییر رمز
           if (parsed.mustChangePassword && location.pathname !== '/dashboard/change-password') {
             navigate('/dashboard/change-password');
           }
         }
         
-        // دریافت نوتیفیکیشن‌ها از سرور
         const res = await client.get('/notifications');
         if (res.data) setNotifications(res.data);
         
@@ -41,11 +38,8 @@ const DashboardLayout = () => {
     };
 
     loadData();
-    
-    // آپدیت خودکار هر 30 ثانیه
     const interval = setInterval(loadData, 30000);
-
-    // گوش دادن به تغییرات توکن (وقتی در صفحات دیگر توکن کم می‌شود)
+    
     const handleStorageChange = () => {
         const updatedUser = localStorage.getItem('user');
         if (updatedUser) setUser(JSON.parse(updatedUser));
@@ -75,10 +69,9 @@ const DashboardLayout = () => {
     if (notif.link) navigate(notif.link);
   };
 
-  // 👇 لیست منوی اصلی
   const menuItems = [
     { icon: <FaHome />, label: 'پیشخوان', path: '/dashboard' },
-    { icon: <FaCoins />, label: 'خرید اعتبار', path: '/dashboard/buy-tokens' }, // ✅ اضافه شد
+    { icon: <FaCoins />, label: 'خرید اعتبار', path: '/dashboard/buy-tokens' },
     { icon: <FaHistory />, label: 'تاریخچه چت', path: '/dashboard/history' },
     { icon: <FaHeadset />, label: 'پشتیبانی', path: '/dashboard/tickets' },
     { icon: <FaUser />, label: 'پروفایل من', path: '/dashboard/profile' },
@@ -96,7 +89,7 @@ const DashboardLayout = () => {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden dir-rtl font-sans">
       
-      {/* 1. سایدبار (منوی کناری) */}
+      {/* 1. سایدبار */}
       <aside className={`
         fixed md:static inset-y-0 right-0 z-50 w-64 bg-slate-900 text-white shadow-2xl transform transition-transform duration-300 ease-in-out
         ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
@@ -120,6 +113,18 @@ const DashboardLayout = () => {
 
         {/* لیست لینک‌ها */}
         <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto custom-scrollbar">
+          
+          {/* 🔥 دکمه هوشمند ادمین (اینجا اضافه شد) 🔥 */}
+          {user.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 px-4 py-3.5 mb-4 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:scale-105 transition-all duration-300 font-bold border border-red-400/50"
+            >
+              <FaUserShield className="text-xl animate-pulse" />
+              <span>پنل مدیریت</span>
+            </Link>
+          )}
+
           {menuItems.map((item) => (
             <Link
               key={item.path}
@@ -169,7 +174,7 @@ const DashboardLayout = () => {
           </div>
           
           <div className="hidden md:block text-gray-500 text-sm font-medium">
-             به پنل مدیریت هوشمند دامپزشکی خوش آمدید 👋
+             به پنل هوشمند دامپزشکی خوش آمدید 👋
           </div>
 
           {/* بخش نوتیفیکیشن */}
