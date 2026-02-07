@@ -5,6 +5,7 @@ import {
   FaHome, FaRobot, FaTicketAlt 
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { FaMoneyBillWave } from 'react-icons/fa';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -66,6 +67,11 @@ const AdminLayout = () => {
           <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition text-yellow-500 border border-slate-700/50">
             <FaHome /> بازگشت به سایت
           </Link>
+
+          <Link to="/admin/finance" className={getLinkClass('/admin/finance')}>
+           <FaMoneyBillWave /> امور مالی
+          </Link>
+          
         </nav>
 
         <div className="p-4 bg-slate-950 border-t border-slate-800">
