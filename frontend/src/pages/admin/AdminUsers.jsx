@@ -21,10 +21,12 @@ const AdminUsers = () => {
     const amount = prompt(`تعداد توکن برای اضافه کردن به ${currentName}:`, "10");
     if (amount && !isNaN(amount)) {
       try {
-        await client.put('/admin/users/charge', { userId, tokens: amount });
-        toast.success(`حساب ${currentName} با موفقیت شارژ شد ✅`);
+        const res = await client.put('/admin/users/charge', { userId, tokens: amount });
+        toast.success(res.data.message || `حساب ${currentName} شارژ شد ✅`);
         fetchUsers();
-      } catch (err) { toast.error('خطا در عملیات شارژ'); }
+      } catch (err) { 
+        toast.error(err.response?.data?.message || 'خطا در عملیات شارژ'); 
+      }
     }
   };
 
@@ -33,27 +35,40 @@ const AdminUsers = () => {
     const newPass = prompt(`رمز عبور جدید برای ${currentName} را وارد کنید:`);
     if (newPass) {
         try {
-            await client.post('/admin/users/reset-password', { userId, newPassword: newPass });
-            toast.success('رمز عبور کاربر تغییر کرد 🔑');
-        } catch(e) { toast.error('خطا در تغییر رمز'); }
+            const res = await client.post('/admin/users/reset-password', { userId, newPassword: newPass });
+            toast.success(res.data.message || 'رمز عبور تغییر کرد 🔑');
+        } catch(err) { 
+            toast.error(err.response?.data?.message || 'خطا در تغییر رمز'); 
+        }
     }
   };
 
-  // ۳. مسدود کردن (بن) کاربر
+  // ۳. مسدود کردن (بن) کاربر - اصلاح شده برای نمایش دقیق خطا
   const handleBan = async (userId, currentRole) => {
-    // اگر کاربر ادمین باشد، نمی‌توان او را بن کرد
-    if(currentRole === 'admin') return toast.error('نمی‌توانید مدیر سیستم را مسدود کنید!');
+    // جلوگیری از ارسال درخواست بن برای ادمین در سمت فرانت
+    if(currentRole === 'admin') {
+        return toast.error('نمی‌توانید مدیر سیستم را مسدود کنید!');
+    }
 
     const confirmMsg = currentRole === 'banned' 
-        ? 'آیا می‌خواهید رفع مسدودیت کنید؟' 
-        : 'آیا مطمئن هستید؟ کاربر دیگر نمی‌تواند وارد شود.';
+        ? 'آیا می‌خواهید این کاربر را رفع مسدودیت کنید؟' 
+        : 'آیا مطمئن هستید؟ کاربر دیگر نمی‌تواند وارد حساب خود شود.';
 
     if(window.confirm(confirmMsg)) {
         try {
-            await client.post('/admin/users/ban', { userId });
-            toast.success(currentRole === 'banned' ? 'کاربر آزاد شد ✅' : 'کاربر مسدود شد ⛔');
+            // ارسال درخواست به سرور
+            const res = await client.post('/admin/users/ban', { userId: userId });
+            
+            // نمایش پیام موفقیت از سمت سرور
+            toast.success(res.data.message);
+            
+            // آپدیت لیست
             fetchUsers();
-        } catch(e) { toast.error('خطا در عملیات'); }
+        } catch(err) { 
+            console.error("Ban Error:", err);
+            // نمایش خطای دقیق سرور (مثلاً: ادمین را نمی‌توان بن کرد)
+            toast.error(err.response?.data?.message || 'خطا در انجام عملیات مسدودسازی'); 
+        }
     }
   };
 
