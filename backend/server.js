@@ -4,18 +4,17 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
-const fs = require('fs'); // اضافه شده برای خواندن فایل
-const path = require('path'); // اضافه شده برای آدرس‌دهی فایل
+const fs = require('fs');
+const path = require('path');
 const adminRoutes = require('./routes/adminRoutes');
-const userController = require('./controllers/userController');
-
+const userController = require('./controllers/userController'); // اضافه شد
 
 // --- تنظیمات اولیه ---
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // این خط برای خواندن req.body حیاتی است
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -28,6 +27,9 @@ mongoose.connect(process.env.MONGO_URI)
 // ==========================================
 // 📌 تعریف مدل‌ها (Models)
 // ==========================================
+// نکته: اگر این مدل‌ها در فایل‌های جداگانه در پوشه models هستند، بهتر است آن‌ها را require کنید.
+// اما برای سادگی و جلوگیری از خطای "Missing Schema"، فعلاً اینجا تعریف شده‌اند.
+// اگر فایل‌های جداگانه دارید، مطمئن شوید که تداخل نام وجود نداشته باشد.
 
 const userSchema = new mongoose.Schema({
   fullName: String,
@@ -225,7 +227,6 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     let referenceText = "";
     let shouldDeductToken = true; 
 
-    // دریافت تنظیمات اسکوپ ربات
     const scope = BOT_SCOPES[botType] || BOT_SCOPES.general;
 
     if (relatedDocs.length > 0) {
@@ -346,10 +347,11 @@ app.get('/api/tickets/:id', authenticateToken, async (req, res) => {
     res.json(ticket);
 });
 
+// این روت برای پاسخ کاربر به تیکت خود است
 app.post('/api/tickets/:id/reply', authenticateToken, async (req, res) => {
     const ticket = await Ticket.findById(req.params.id);
     ticket.messages.push({ sender: 'user', text: req.body.text });
-    ticket.status = 'open';
+    ticket.status = 'open'; // وقتی کاربر جواب میده وضعیت دوباره باز میشه
     await ticket.save();
     res.json({ message: 'پاسخ ارسال شد' });
 });
@@ -369,27 +371,17 @@ app.get('/api/setup/import-bee', async (req, res) => {
     try {
         const filePath = path.join(__dirname, 'data', 'bee_data.csv');
         
-        // 1. چک کردن وجود فایل
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ message: '❌ فایل bee_data.csv در پوشه backend/data پیدا نشد.' });
         }
 
-        // 2. خواندن فایل
         const data = fs.readFileSync(filePath, 'utf8');
-        const rows = data.split('\n').slice(1); // حذف هدر
+        const rows = data.split('\n').slice(1);
         let count = 0;
 
         for (const row of rows) {
             if (!row.trim()) continue;
-            
-            // پارس کردن ساده CSV
-            // فرض می‌کنیم ستون‌ها با ویرگول جدا شدند و ترتیبشان مثل فایل شماست:
-            // نام بیماری، دسته‌بندی، علائم، درمان، توضیحات
-            
-            // نکته: اگر در متن ویرگول باشد، این روش ساده خطا می‌دهد. برای CSV پیچیده باید از کتابخانه csv-parser استفاده کرد.
-            // اما چون خواستی بدون ترمینال باشد، این نسخه ساده را می‌گذارم:
             const cols = row.split(','); 
-            
             if (cols.length >= 4) {
                 const title = cols[0]?.trim();
                 const subCategory = cols[1]?.trim();
@@ -398,26 +390,16 @@ app.get('/api/setup/import-bee', async (req, res) => {
                 const extra = cols[4]?.trim() || '';
 
                 const content = `بیماری: ${title}\nعلائم: ${symptoms}\nدرمان: ${treatment}\nتوضیحات: ${extra}`;
-
                 const exists = await KnowledgeBase.findOne({ title });
                 if (!exists) {
                     await KnowledgeBase.create({
-                        title,
-                        category: 'bee', // 🐝 اختصاصی زنبور
-                        subCategory,
-                        content,
-                        tags: ['bee', 'disease', subCategory]
+                        title, category: 'bee', subCategory, content, tags: ['bee', 'disease', subCategory]
                     });
                     count++;
                 }
             }
         }
-
-        res.json({ 
-            message: `✅ عملیات موفق! ${count} رکورد جدید به دیتابیس زنبور اضافه شد.`,
-            status: 'success'
-        });
-
+        res.json({ message: `✅ عملیات موفق! ${count} رکورد جدید به دیتابیس زنبور اضافه شد.`, status: 'success' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'خطا در ایمپورت: ' + error.message });
@@ -425,11 +407,11 @@ app.get('/api/setup/import-bee', async (req, res) => {
 });
 
 
-// روت‌های ادمین
+// --- روت‌های ادمین (Admin Routes) ---
 app.use('/api/admin', adminRoutes);
 
 
-// --- روت‌های پروفایل کاربر (جدید) ---
+// --- روت‌های پروفایل کاربر (User Profile) ---
 app.put('/api/users/profile', authenticateToken, userController.updateProfile);
 app.get('/api/users/profile', authenticateToken, userController.getProfile);
 
