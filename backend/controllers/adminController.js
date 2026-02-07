@@ -4,18 +4,16 @@ const KnowledgeBase = require('../models/KnowledgeBase');
 const Ticket = require('../models/Ticket');
 const Transaction = require('../models/Transaction');
 
-// ۱. آمار داشبورد (پیشرفته با نمودار)
+// ۱. آمار داشبورد
 exports.getStats = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
     const totalChats = await ChatLog.countDocuments();
     const pendingTickets = await Ticket.countDocuments({ status: 'open' });
     
-    // محاسبه درآمد کل
     const incomeResult = await Transaction.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]);
     const totalIncome = incomeResult[0]?.total || 0;
 
-    // داده‌های نمودار (ثبت‌نام‌های ۷ روز اخیر)
     const last7Days = [...Array(7).keys()].map(i => {
         const d = new Date();
         d.setDate(d.getDate() - i);
@@ -24,10 +22,8 @@ exports.getStats = async (req, res) => {
 
     const chartData = [];
     for (const date of last7Days) {
-        // بازه زمانی شروع و پایان روز
         const startOfDay = new Date(date);
         const endOfDay = new Date(new Date(date).getTime() + 86400000);
-        
         const count = await User.countDocuments({ 
             createdAt: { $gte: startOfDay, $lt: endOfDay } 
         });
@@ -52,13 +48,12 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-// ✅ تابع شارژ سریع (مخصوص صفحه کاربران) - این حذف شده بود!
+// ۳. شارژ توکن
 exports.updateUserTokens = async (req, res) => {
   try {
     const { userId, tokens } = req.body;
-    
-    // تبدیل به عدد برای جلوگیری از خطای رشته
     const amount = parseInt(tokens);
+    
     if (isNaN(amount)) return res.status(400).json({ message: 'مقدار باید عدد باشد' });
 
     const user = await User.findById(userId);
@@ -67,11 +62,11 @@ exports.updateUserTokens = async (req, res) => {
     user.tokens = (user.tokens || 0) + amount;
     await user.save();
 
-    // اختیاری: ثبت یک تراکنش سیستمی برای سابقه
+    // ثبت تراکنش سیستمی (اختیاری)
     await Transaction.create({
         user: userId,
         admin: req.user._id,
-        amount: 0, // چون دستی شارژ شده و پول نگرفتیم (یا مبلغ دلخواه)
+        amount: 0,
         tokens: amount,
         description: 'شارژ دستی سریع از پنل کاربران'
     });
@@ -83,40 +78,47 @@ exports.updateUserTokens = async (req, res) => {
   }
 };
 
+// ۴. بن کردن کاربر (اصلاح شده: بدون تغییر رمز)
 exports.banUser = async (req, res) => {
     try {
         const { userId } = req.body;
-        // تغییر وضعیت به banned
-        const user = await User.findById(userId);
-        if (user.role === 'admin') return res.status(403).json({ message: 'مدیر را نمی‌توان مسدود کرد' });
         
-        // اگر کاربر قبلا بن شده، آزادش کن، وگرنه بن کن
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'کاربر یافت نشد' });
+        
+        if (user.role === 'admin') {
+            return res.status(403).json({ message: 'نمی‌توانید مدیر سیستم را مسدود کنید!' });
+        }
+
+        // منطق بن / آنبن
         if (user.role === 'banned') {
+            // رفع مسدودیت
             user.role = 'user';
-            // بازنشانی رمز تصادفی به یک رمز موقت (اختیاری) یا فقط تغییر نقش
+            await user.save();
+            return res.json({ message: 'کاربر رفع مسدودیت شد و می‌تواند وارد شود ✅', newRole: 'user' });
         } else {
+            // مسدود کردن
             user.role = 'banned';
-            // رمز را عوض می‌کنیم تا سشن‌های فعال هم بیرون بیفتند
-            user.password = `BANNED_${Date.now()}_${Math.random()}`;
+            // ❌ حذف شد: user.password = ... (دیگر رمز را عوض نمی‌کنیم)
+            await user.save();
+            return res.json({ message: 'کاربر مسدود شد و دیگر نمی‌تواند وارد شود ⛔', newRole: 'banned' });
         }
         
-        await user.save();
-        res.json({ message: user.role === 'banned' ? 'کاربر مسدود شد' : 'کاربر آزاد شد' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error banning user' });
+        console.error("BAN ERROR:", error);
+        res.status(500).json({ message: 'خطا در تغییر وضعیت کاربر' });
     }
 };
 
+// ۵. تغییر رمز عبور
 exports.resetUserPassword = async (req, res) => {
     try {
         const { userId, newPassword } = req.body;
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'کاربر یافت نشد' });
 
-        // ✅ اصلاح مهم: استفاده از user.save() برای فعال شدن هوک‌های احتمالی هشینگ
         user.password = newPassword;
-        user.mustChangePassword = true; // کاربر را مجبور کنیم بعد از ورود رمز را عوض کند
+        user.mustChangePassword = true;
         await user.save();
 
         res.json({ message: 'رمز تغییر کرد.' });
@@ -126,15 +128,13 @@ exports.resetUserPassword = async (req, res) => {
     }
 };
 
-// ۳. مدیریت مالی (تراکنش‌های کامل)
+// ۶. مدیریت مالی
 exports.createTransaction = async (req, res) => {
     try {
         const { userId, amount, tokens, description } = req.body;
-        
         const tokenAmount = parseInt(tokens);
         const priceAmount = parseInt(amount);
 
-        // ۱. ثبت تراکنش
         await Transaction.create({ 
             user: userId, 
             admin: req.user._id, 
@@ -143,7 +143,6 @@ exports.createTransaction = async (req, res) => {
             description 
         });
         
-        // ۲. افزایش توکن کاربر
         const user = await User.findById(userId);
         user.tokens = (user.tokens || 0) + tokenAmount;
         await user.save();
@@ -168,7 +167,7 @@ exports.getTransactions = async (req, res) => {
     }
 };
 
-// ۴. مدیریت دانش
+// ۷. دانش
 exports.addKnowledge = async (req, res) => {
     try { await KnowledgeBase.create(req.body); res.json({message:'اضافه شد'}); } 
     catch(e){ console.error(e); res.status(500).json({message:'Error'}); }
@@ -182,7 +181,7 @@ exports.deleteKnowledge = async (req, res) => {
     catch(e){ console.error(e); res.status(500).json({message:'Error'}); }
 };
 
-// ۵. چت‌ها
+// ۸. چت‌ها
 exports.getChatLogs = async (req, res) => {
     try {
         const { filter } = req.query; 
@@ -200,7 +199,7 @@ exports.getChatLogs = async (req, res) => {
     }
 };
 
-// ۶. تیکت‌ها
+// ۹. تیکت‌ها
 exports.getAllTickets = async (req, res) => {
     try { 
         const tickets = await Ticket.find()
@@ -219,6 +218,9 @@ exports.replyTicket = async (req, res) => {
         const ticket = await Ticket.findById(req.params.id);
         if (!ticket) return res.status(404).json({ message: 'تیکت یافت نشد' });
 
+        // اطمینان از وجود آرایه messages
+        if (!ticket.messages) ticket.messages = [];
+
         ticket.messages.push({ 
             sender: 'admin', 
             text: text,
@@ -228,7 +230,7 @@ exports.replyTicket = async (req, res) => {
         await ticket.save();
         res.json({ message: 'پاسخ ارسال شد' });
     } catch (e) { 
-        console.error(e); 
+        console.error("Reply Ticket Error:", e); 
         res.status(500).json({ message: 'Error replying ticket' }); 
     }
 };
