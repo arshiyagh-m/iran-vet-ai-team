@@ -1,28 +1,30 @@
 const express = require('express');
 const router = express.Router();
 const { protectAdmin } = require('../middleware/adminMiddleware');
-const adminController = require('../controllers/adminController');
+const ctrl = require('../controllers/adminController');
 
 router.use(protectAdmin);
 
-// آمار
-router.get('/stats', adminController.getStats);
+// داشبورد
+router.get('/stats', ctrl.getStats);
 
 // کاربران
-router.get('/users', adminController.getAllUsers);
-router.put('/users/charge', adminController.updateUserTokens);
-router.post('/users/ban', adminController.banUser);
+router.get('/users', ctrl.getAllUsers);
+router.post('/users/ban', ctrl.banUser);
+router.post('/users/reset-password', ctrl.resetUserPassword);
+
+// مالی (جدید)
+router.get('/finance', ctrl.getTransactions);
+router.post('/finance/charge', ctrl.createTransaction);
 
 // دانش
-router.get('/knowledge', adminController.getAllKnowledge);
-router.post('/knowledge', adminController.addKnowledge);
-router.delete('/knowledge/:id', adminController.deleteKnowledge);
+router.get('/knowledge', ctrl.getAllKnowledge);
+router.post('/knowledge', ctrl.addKnowledge);
+router.delete('/knowledge/:id', ctrl.deleteKnowledge);
 
-// چت‌ها
-router.get('/chats', adminController.getChatLogs);
-
-// تیکت‌ها
-router.get('/tickets', adminController.getAllTickets);
-router.post('/tickets/:id/reply', adminController.replyTicket);
+// چت و تیکت
+router.get('/chats', ctrl.getChatLogs);
+router.get('/tickets', ctrl.getAllTickets);
+router.post('/tickets/:id/reply', ctrl.replyTicket);
 
 module.exports = router;
