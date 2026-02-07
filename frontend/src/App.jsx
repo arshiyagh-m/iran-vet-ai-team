@@ -9,6 +9,9 @@ import Footer from './components/layout/Footer';
 import DashboardLayout from './components/layout/DashboardLayout';
 import AdminLayout from './components/layout/AdminLayout';
 
+// 👇👇 ایمپورت محافظ روت (خیلی مهم)
+import AdminRoute from './components/routes/AdminRoute';
+
 // --- صفحات عمومی ---
 import Home from './pages/public/Home';
 import Login from './pages/auth/Login';
@@ -30,7 +33,6 @@ import BuyTokens from './pages/dashboard/BuyTokens';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminKnowledge from './pages/admin/AdminKnowledge';
-// 👇👇 ایمپورت‌های جدید برای تکمیل پنل ادمین
 import AdminChatLogs from './pages/admin/AdminChatLogs';
 import AdminTickets from './pages/admin/AdminTickets';
 import AdminFinance from './pages/admin/AdminFinance';
@@ -70,16 +72,17 @@ const App = () => {
           <Route path="chat/:type" element={<BotChat />} />
         </Route>
 
-        {/* ۳. پنل مدیریت (ادمین) - کامل شده ✅ */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />       {/* پیشخوان آمار */}
-          <Route path="users" element={<AdminUsers />} />    {/* مدیریت کاربران و مالی */}
-          <Route path="knowledge" element={<AdminKnowledge />} /> {/* دیتابیس هوشمند */}
-          
-          {/* 👇 مسیرهای اضافه شده: */}
-          <Route path="chats" element={<AdminChatLogs />} />   {/* مانیتورینگ چت‌ها */}
-          <Route path="tickets" element={<AdminTickets />} />  {/* مدیریت تیکت‌ها */}
-          <Route path="finance" element={<AdminFinance />} />
+        {/* ۳. پنل مدیریت (محافظت شده) 🔒✅ */}
+        {/* فقط اگر AdminRoute اجازه دهد، وارد این بخش می‌شود */}
+        <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="knowledge" element={<AdminKnowledge />} />
+              <Route path="chats" element={<AdminChatLogs />} />
+              <Route path="tickets" element={<AdminTickets />} />
+              <Route path="finance" element={<AdminFinance />} />
+            </Route>
         </Route>
 
         {/* ۴. صفحه ۴۰۴ */}
