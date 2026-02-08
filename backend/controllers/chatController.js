@@ -27,76 +27,100 @@ exports.chat = async (req, res) => {
     const userId = req.user.id;
     const user = await User.findById(userId);
 
-    // --- گام صفر: پاسخ به سلام و احوال‌پرسی (بدون هزینه) ---
+    // --- گام صفر: پاسخ به سلام (بدون هزینه) ---
     const greetings = ['سلام', 'درود', 'خسته نباشید', 'چطوری', 'خوبی', 'صبح بخیر', 'شب بخیر', 'hi', 'hello'];
-    // اگر پیام کوتاه بود و با سلام شروع می‌شد
     const isGreeting = greetings.some(g => message.trim().toLowerCase().startsWith(g)) && message.length < 30;
 
     if (isGreeting) {
         const botName = BOT_TITLES[botType] || 'دامپزشکی';
         return res.json({ 
-            response: `سلام! من دستیار هوشمند و تخصصی ${botName} هستم. سوال خود را بپرسید تا در پایگاه دانش جستجو کنم.`, 
+            response: `سلام! من دستیار هوشمند و تخصصی ${botName} هستم. لطفاً علائم و مشکل حیوان را توضیح دهید تا بررسی کنم.`, 
             remainingTokens: user.tokens, 
             isFallback: false 
         });
     }
 
-    // --- گام یک: بررسی اعتبار (لایسنس یا توکن کاربر) ---
+    // --- گام یک: بررسی اعتبار (لایسنس یا توکن) ---
     let activeLicense = null;
     let useUserTokens = false;
 
     if (licenseCode) {
-        // بررسی لایسنس
         activeLicense = await License.findOne({ code: licenseCode, isActive: true });
         if (!activeLicense || activeLicense.tokens < 1) {
             return res.status(400).json({ message: 'لایسنس نامعتبر یا فاقد اعتبار است.' });
         }
     } else {
-        // بررسی توکن کاربر
         if (user.tokens < 1) {
             return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است. لطفاً حساب خود را شارژ کنید.' });
         }
         useUserTokens = true;
     }
 
-    // --- گام دو: جستجو در دیتابیس (Strict RAG) ---
-    // فقط در دسته‌بندی مربوطه (botType) جستجو می‌کنیم
-    const relatedDocs = await KnowledgeBase.find({
-        category: botType,
-        content: { $regex: message, $options: 'i' } // جستجوی کلمه کلیدی
-    }).limit(3); // حداکثر ۳ سند مرتبط
+    // --- گام دو: دریافت حافظه ۵ پیام آخر (Memory) 🔥 ---
+    const historyLogs = await ChatLog.find({ user: userId, botType })
+        .sort({ timestamp: -1 }) // جدیدترین‌ها اول
+        .limit(5); // ۵ تعامل آخر
+    
+    // تبدیل به فرمت OpenAI (از قدیمی به جدید)
+    const historyMessages = historyLogs.reverse().flatMap(log => [
+        { role: "user", content: log.question },
+        { role: "assistant", content: log.answer }
+    ]);
+
+    // --- گام سه: جستجو در دیتابیس (Keywords) 🔥 ---
+    const stopWords = ['اقا', 'آقا', 'من', 'تو', 'ما', 'شما', 'است', 'که', 'در', 'با', 'از', 'به', 'را', 'این', 'آن', 'زنبور', 'عسل', 'دارم', 'داره', 'هست', 'اره', 'آره', 'بله', 'خیر', 'نه', 'ندارم', 'ولی']; 
+    const cleanMessage = message.replace(/[،؛:!?.()]/g, ''); 
+    const words = cleanMessage.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+
+    let searchCondition = {};
+    if (words.length > 0) {
+        searchCondition = {
+            category: botType,
+            $or: words.map(word => ({ content: { $regex: word, $options: 'i' } }))
+        };
+    } else {
+        searchCondition = { category: botType, content: { $regex: message, $options: 'i' } };
+    }
+
+    const relatedDocs = await KnowledgeBase.find(searchCondition).limit(3);
 
     let aiAnswer = "";
     let referenceText = "";
-    let shouldDeductToken = false; // پیش‌فرض: توکن کم نمی‌شود مگر جواب پیدا شود
+    let shouldDeductToken = false; 
 
-    // 🔴 لاجیک اصلی: فقط اگر داکیومنت بود به OpenAI بفرست
-    if (relatedDocs.length === 0) {
-        // حالت ۱: اطلاعاتی در دیتابیس نیست
-        // ⛔ اینجا اصلا به OpenAI وصل نمی‌شویم (صرفه‌جویی در هزینه)
-        aiAnswer = "متاسفانه اطلاعاتی در مورد این موضوع در پایگاه دانش تخصصی من یافت نشد. لطفاً با یک دامپزشک مشورت کنید.";
+    // --- گام چهار: تصمیم‌گیری هوشمند ---
+    // اگر دیتابیس خالی است اما تاریخچه داریم (Follow-up)، نباید قطع کنیم
+    const isFollowUp = historyMessages.length > 0 && relatedDocs.length === 0;
+
+    if (relatedDocs.length === 0 && !isFollowUp) {
+        // حالت ۱: اطلاعاتی نیست و بحث جدید است
+        aiAnswer = "متاسفانه با این کلمات، اطلاعاتی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را کامل‌تر توضیح دهید.";
         referenceText = "بدون منبع";
-        shouldDeductToken = false; // توکن کم نمی‌کنیم چون جوابی ندادیم
+        shouldDeductToken = false; // توکن کسر نمی‌شود
     } else {
-        // حالت ۲: اطلاعات پیدا شد
-        shouldDeductToken = true; // چون جواب می‌دهیم، توکن کم می‌کنیم
+        // حالت ۲: اطلاعات داریم یا داریم از حافظه استفاده می‌کنیم
+        shouldDeductToken = true;
         
-        // آماده‌سازی متن منبع برای هوش مصنوعی
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
-        referenceText = relatedDocs.map(doc => doc.title).join(", ");
+        referenceText = relatedDocs.length > 0 ? relatedDocs.map(doc => doc.title).join(", ") : "حافظه گفتگو";
         const botTitle = BOT_TITLES[botType] || botType;
 
-        // 🔥 پرامپت سخت‌گیرانه (Strict Prompt)
+        // 🔥 پرامپت دکتر هوشمند با حافظه
         const systemPrompt = `
-        شما یک دستیار هوشمند متخصص در زمینه "${botTitle}" هستید.
-        
-        🔴 دستورالعمل بسیار مهم (Strict Rules):
-        1. به سوال کاربر **فقط و فقط** با استفاده از متن‌های زیر ("CONTEXT") پاسخ بده.
-        2. حق استفاده از دانش عمومی خودت را نداری. اگر جواب در متن زیر نیست، بگو "اطلاعات کافی در متن موجود نیست".
-        3. پاسخ را کاملاً علمی، دقیق و به زبان فارسی بنویس.
+            شما یک "دامپزشک متخصص" و هوشمند در زمینه "${botTitle}" هستید.
+            
+            منابع دانش جدید (CONTEXT):
+            ${contextData ? contextData : "اطلاعات جدیدی یافت نشد، فقط به حافظه گفتگو (History) مراجعه کن."}
 
-        CONTEXT:
-        ${contextData}
+            دستورالعمل حیاتی (Diagnosis Protocol):
+            1. شما به ۵ پیام آخر گفتگو دسترسی دارید.
+            2. اگر کاربر پاسخی کوتاه داد (مثل "بله"، "خیر"، "همینطوره")، آن را در کنار سوال قبلی خودت در History تحلیل کن.
+            3. تشخیص بیماری:
+               - اگر با ترکیب پاسخ جدید کاربر و اطلاعات قبلی، بیماری قطعی شد -> درمان را کامل توضیح بده.
+               - اگر هنوز شک داری -> سوال بعدی را بپرس تا علائم شفاف شود.
+            
+            4. فقط از اطلاعات CONTEXT و History استفاده کن. دانش عمومی ممنوع.
+            5. لحن: دلسوزانه و علمی.
         `;
 
         // ارسال به OpenAI
@@ -104,15 +128,16 @@ exports.chat = async (req, res) => {
             model: "gpt-3.5-turbo",
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: message }
+                ...historyMessages, // تزریق حافظه
+                { role: "user", content: message } // پیام جدید
             ],
-            temperature: 0, // 🔥 دمای صفر: یعنی خلاقیت صفر (فقط واقعیت)
+            temperature: 0.3, 
         });
 
         aiAnswer = completion.choices[0].message.content;
     }
 
-    // --- گام سه: کسر اعتبار (فقط اگر از دیتابیس جواب داده باشد) ---
+    // --- گام پنج: کسر اعتبار ---
     if (shouldDeductToken) {
         if (useUserTokens) {
             user.tokens -= 1;
@@ -123,27 +148,26 @@ exports.chat = async (req, res) => {
         }
     }
 
-    // --- گام چهار: ذخیره لاگ ---
-    const newChat = new ChatLog({
+    // --- گام شش: ذخیره لاگ ---
+    await ChatLog.create({
         user: userId,
         botType: botType,
         question: message,
         answer: aiAnswer,
         reference: referenceText,
         licenseUsed: licenseCode || 'UserTokens',
-        isFallbackResponse: relatedDocs.length === 0 // اگر داکیومنت نبود، یعنی فال‌بک
+        isFallbackResponse: relatedDocs.length === 0 && !isFollowUp
     });
-    await newChat.save();
 
-    // --- گام پنج: ارسال پاسخ به فرانت ---
+    // --- گام هفت: پاسخ به کلاینت ---
     res.json({
         response: aiAnswer,
         remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
-        isFallback: relatedDocs.length === 0
+        isFallback: relatedDocs.length === 0 && !isFollowUp
     });
 
   } catch (error) {
-    console.error("Chat Error:", error);
+    console.error("Chat Controller Error:", error);
     res.status(500).json({ message: 'خطا در پردازش درخواست.' });
   }
 };
