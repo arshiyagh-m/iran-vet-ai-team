@@ -1,192 +1,202 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import client from '../../api/client';
-import { FaHistory, FaSearch, FaRobot, FaCalendarAlt, FaTimes, FaEye, FaChevronLeft } from 'react-icons/fa';
+import { 
+  FaHistory, FaSearch, FaRobot, FaCalendarAlt, FaTrash, 
+  FaChevronLeft, FaCommentDots, FaForumbee, FaDog, FaCat, FaStethoscope, FaFeather, FaPaw, FaFish, FaUserMd 
+} from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const History = () => {
-  const [chats, setChats] = useState([]);
+  const navigate = useNavigate();
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // استیت برای مودال جزئیات (وقتی روی یک چت کلیک میشه این پر میشه)
-  const [selectedChat, setSelectedChat] = useState(null);
 
-  // دریافت تاریخچه واقعی از سرور
+  // 1. دریافت لیست نشست‌ها از سرور
   useEffect(() => {
-    const fetchHistory = async () => {
+    const fetchSessions = async () => {
       try {
-        const res = await client.get('/chat/history');
-        setChats(res.data);
+        const res = await client.get('/chat/sessions');
+        setSessions(res.data);
       } catch (error) {
         console.error("History Error:", error);
-        // اگر هنوز چتی نکرده باشی ارور 404 یا آرایه خالی طبیعیه، پس ارور نشون نمیدیم
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHistory();
+    fetchSessions();
   }, []);
 
-  // فیلتر کردن بر اساس جستجو
-  const filteredChats = chats.filter(chat => 
-    (chat.question && chat.question.includes(searchTerm)) || 
-    (chat.answer && chat.answer.includes(searchTerm))
+  // 2. حذف یک گفتگو
+  const handleDelete = async (e, sessionId) => {
+      e.stopPropagation(); // جلوگیری از باز شدن چت وقتی دکمه حذف زده میشه
+      if(!window.confirm("آیا از حذف این گفتگو مطمئن هستید؟")) return;
+
+      try {
+          await client.delete(`/chat/sessions/${sessionId}`);
+          setSessions(prev => prev.filter(s => s._id !== sessionId));
+          toast.success("گفتگو حذف شد");
+      } catch (error) {
+          toast.error("خطا در حذف");
+      }
+  };
+
+  // 3. فیلتر کردن (جستجو در عنوان چت)
+  const filteredSessions = sessions.filter(session => 
+    session.title && session.title.includes(searchTerm)
   );
 
   return (
-    <div className="space-y-6 relative min-h-screen pb-10">
+    <div className="space-y-6 animate-fadeIn pb-20">
       
       {/* هدر صفحه */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <FaHistory className="text-blue-600" />
-            تاریخچه مشاوره‌ها
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">آرشیو تمام گفتگوهای شما با هوش مصنوعی</p>
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+            <FaHistory size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">تاریخچه گفتگوها</h2>
+            <p className="text-gray-400 text-xs mt-1">آرشیو تمام مشاوره‌های هوشمند شما</p>
+          </div>
         </div>
 
-        {/* جستجو */}
-        <div className="relative w-full md:w-64">
+        {/* سرچ باکس */}
+        <div className="relative w-full md:w-72 group">
           <input 
             type="text" 
-            placeholder="جستجو در متن..." 
-            className="w-full pl-4 pr-10 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-blue-500 outline-none transition"
+            placeholder="جستجو در عنوان گفتگو..." 
+            className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:bg-white focus:border-blue-100 outline-none transition text-sm shadow-inner group-hover:bg-white"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <FaSearch className="absolute right-3 top-3 text-gray-400" />
+          <FaSearch className="absolute left-3 top-3.5 text-gray-400 group-hover:text-blue-400 transition" />
         </div>
       </div>
 
-      {/* لیست چت‌ها */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* لیست نشست‌ها */}
+      <div className="grid gap-4">
         {loading ? (
-          <div className="p-12 text-center flex flex-col items-center gap-3">
-             <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-             <span className="text-gray-500">در حال دریافت اطلاعات...</span>
+          <div className="text-center py-20">
+             <div className="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+             <p className="text-gray-400 text-sm">در حال بارگذاری سوابق...</p>
           </div>
-        ) : filteredChats.length === 0 ? (
-          <div className="p-16 text-center flex flex-col items-center text-gray-400">
-            <FaRobot size={60} className="mb-4 opacity-20" />
-            <p className="text-lg font-medium">هنوز هیچ مشاوره ای ثبت نشده است.</p>
-            <p className="text-sm mt-2">به بخش "ربات‌ها" بروید و اولین سوال خود را بپرسید!</p>
+        ) : filteredSessions.length === 0 ? (
+          <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm flex flex-col items-center">
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
+                <FaCommentDots size={40} />
+            </div>
+            <h3 className="text-gray-800 font-bold mb-2">هیچ گفتگویی یافت نشد</h3>
+            <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">
+                شما هنوز هیچ مشاوره هوشمندی انجام نداده‌اید. برای شروع، یک ربات را انتخاب کنید.
+            </p>
+            <button 
+                onClick={() => navigate('/dashboard/bots')}
+                className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-lg shadow-blue-200 text-sm font-medium"
+            >
+                شروع اولین گفتگو
+            </button>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
-            {filteredChats.map((chat) => (
-              <div 
-                key={chat._id} 
-                onClick={() => setSelectedChat(chat)} // 👇 باز کردن جزئیات
-                className="p-5 hover:bg-blue-50/40 transition cursor-pointer group flex items-center justify-between"
-              >
+          filteredSessions.map((session) => (
+            <div 
+              key={session._id} 
+              onClick={() => navigate(`/dashboard/chat/${session.botType}/${session._id}`)} // 👇 هدایت به چت
+              className="group bg-white p-4 rounded-2xl border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all cursor-pointer flex items-center justify-between relative overflow-hidden"
+            >
+              {/* نوار رنگی سمت راست */}
+              <div className={`absolute right-0 top-0 bottom-0 w-1 ${getBotColor(session.botType)} rounded-r-2xl`}></div>
+
+              <div className="flex items-center gap-4 flex-1 min-w-0 pr-3">
+                {/* آیکون ربات */}
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl shadow-sm shrink-0 ${getBotColor(session.botType)}`}>
+                    {getBotIcon(session.botType)}
+                </div>
+
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${getBotBadgeColor(chat.botType)}`}>
-                      {chat.botType || 'General'}
-                    </span>
-                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                        <FaCalendarAlt size={10} />
-                        {new Date(chat.timestamp).toLocaleDateString('fa-IR')}
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-gray-800 truncate text-sm md:text-base group-hover:text-blue-600 transition">
+                      {session.title || 'گفتگوی بدون عنوان'}
+                    </h3>
+                    {/* بج نوع ربات */}
+                    <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md border border-gray-200 hidden sm:inline-block">
+                        {getBotName(session.botType)}
                     </span>
                   </div>
                   
-                  <h3 className="font-bold text-gray-800 text-sm md:text-base mb-1 truncate pl-4">
-                    {chat.question}
-                  </h3>
-                  <p className="text-xs text-gray-500 truncate pl-4 opacity-70">
-                    {chat.answer ? chat.answer.substring(0, 60) + "..." : "..."}
-                  </p>
-                </div>
-
-                <div className="mr-4">
-                   <button className="p-2 text-gray-300 group-hover:text-blue-500 transition">
-                      <FaChevronLeft />
-                   </button>
+                  <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <span className="flex items-center gap-1">
+                        <FaCalendarAlt />
+                        {new Date(session.updatedAt).toLocaleDateString('fa-IR')}
+                    </span>
+                    <span className="flex items-center gap-1">
+                        <FaRobot />
+                        {session.botType} AI
+                    </span>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+
+              {/* دکمه‌ها (فلش و حذف) */}
+              <div className="flex items-center gap-2 pl-2">
+                 <button 
+                    onClick={(e) => handleDelete(e, session._id)}
+                    className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition"
+                    title="حذف تاریخچه"
+                 >
+                    <FaTrash size={14} />
+                 </button>
+                 <div className="p-2 bg-gray-50 text-gray-400 rounded-xl group-hover:bg-blue-50 group-hover:text-blue-500 transition">
+                    <FaChevronLeft size={14} />
+                 </div>
+              </div>
+            </div>
+          ))
         )}
       </div>
-
-      {/* 👇 مودال نمایش جزئیات (Pop-up) */}
-      {selectedChat && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn" onClick={() => setSelectedChat(null)}>
-          <div 
-            className="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl relative flex flex-col"
-            onClick={(e) => e.stopPropagation()} // جلوگیری از بسته شدن با کلیک روی خود مودال
-          >
-            
-            {/* هدر مودال */}
-            <div className="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10">
-               <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                 <FaEye className="text-blue-500" />
-                 جزئیات مشاوره
-               </h3>
-               <button 
-                 onClick={() => setSelectedChat(null)}
-                 className="p-2 bg-white hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-full transition shadow-sm border border-gray-100"
-               >
-                 <FaTimes />
-               </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto custom-scrollbar">
-              
-              {/* سوال کاربر */}
-              <div className="mb-6">
-                <div className="text-xs text-gray-400 mb-2 font-bold pr-1">سوال شما:</div>
-                <div className="bg-blue-50/80 p-4 rounded-2xl rounded-tr-none text-gray-800 leading-relaxed border border-blue-100 shadow-sm">
-                  {selectedChat.question}
-                </div>
-              </div>
-
-              {/* جواب هوش مصنوعی */}
-              <div>
-                <div className="text-xs text-gray-400 mb-2 font-bold pr-1 flex justify-between items-center">
-                    <span>پاسخ هوش مصنوعی:</span>
-                    {selectedChat.isFallbackResponse && (
-                        <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded text-[10px] border border-amber-100">پاسخ عمومی</span>
-                    )}
-                </div>
-                <div className="bg-white p-5 rounded-2xl rounded-tl-none text-gray-700 leading-8 border border-gray-200 shadow-sm whitespace-pre-line text-justify">
-                  {selectedChat.answer}
-                </div>
-              </div>
-
-              {/* منابع */}
-              {selectedChat.reference && (
-                  <div className="mt-8 pt-4 border-t border-dashed border-gray-200">
-                      <div className="text-[10px] uppercase text-gray-400 font-bold mb-1">منبع استفاده شده:</div>
-                      <div className="text-xs text-gray-500 bg-gray-50 inline-block px-3 py-1 rounded border border-gray-100">
-                        {selectedChat.reference}
-                      </div>
-                  </div>
-              )}
-            </div>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );
 };
 
-// رنگ‌بندی بج‌ها بر اساس نوع ربات
-const getBotBadgeColor = (type) => {
+// --- هلپر فانکشن‌ها برای آیکون و رنگ ---
+const getBotIcon = (type) => {
     switch (type) {
-        case 'bee': return 'bg-amber-50 text-amber-600 border-amber-100';
-        case 'dog': return 'bg-orange-50 text-orange-600 border-orange-100';
-        case 'cat': return 'bg-blue-50 text-blue-600 border-blue-100';
-        case 'cow': return 'bg-green-50 text-green-600 border-green-100';
-        case 'horse': return 'bg-yellow-50 text-yellow-600 border-yellow-100';
-        case 'poultry': return 'bg-red-50 text-red-600 border-red-100';
-        case 'fish': return 'bg-cyan-50 text-cyan-600 border-cyan-100';
-        default: return 'bg-gray-50 text-gray-500 border-gray-100';
+        case 'bee': return <FaForumbee />;
+        case 'dog': return <FaDog />;
+        case 'cat': return <FaCat />;
+        case 'cow': return <FaPaw />;
+        case 'horse': return <FaStethoscope />;
+        case 'poultry': return <FaFeather />;
+        case 'fish': return <FaFish />;
+        case 'general': return <FaUserMd />;
+        default: return <FaRobot />;
     }
+};
+
+const getBotColor = (type) => {
+    switch (type) {
+        case 'bee': return 'bg-amber-500';
+        case 'dog': return 'bg-orange-500';
+        case 'cat': return 'bg-blue-500';
+        case 'cow': return 'bg-green-600';
+        case 'horse': return 'bg-yellow-600';
+        case 'poultry': return 'bg-red-500';
+        case 'fish': return 'bg-cyan-500';
+        case 'general': return 'bg-indigo-600';
+        default: return 'bg-slate-500';
+    }
+};
+
+const getBotName = (type) => {
+    const names = {
+        bee: 'زنبور عسل', dog: 'سگ‌ها', cat: 'گربه‌ها', 
+        cow: 'دام بزرگ', horse: 'اسب', poultry: 'طیور', 
+        fish: 'آبزیان', general: 'عمومی'
+    };
+    return names[type] || 'عمومی';
 };
 
 export default History;
