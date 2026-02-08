@@ -63,9 +63,18 @@ const kbSchema = new mongoose.Schema({
 });
 const KnowledgeBase = mongoose.models.KnowledgeBase || mongoose.model('KnowledgeBase', kbSchema);
 
-// 4. ChatLog Model
+// 4. ChatSession Model (جدید: برای مدیریت نشست‌های گفتگو) 🔥
+const sessionSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  botType: String, // مثلاً bee, dog
+  title: String,   // عنوان چت
+}, { timestamps: true });
+const ChatSession = mongoose.models.ChatSession || mongoose.model('ChatSession', sessionSchema);
+
+// 5. ChatLog Model (آپدیت شده با sessionId)
 const chatLogSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  session: { type: mongoose.Schema.Types.ObjectId, ref: 'ChatSession' }, // ارتباط با سشن
   botType: { type: String, default: 'General' },
   question: { type: String, required: true },
   answer: { type: String, required: true },
@@ -76,7 +85,7 @@ const chatLogSchema = new mongoose.Schema({
 });
 const ChatLog = mongoose.models.ChatLog || mongoose.model('ChatLog', chatLogSchema);
 
-// 5. Ticket Model
+// 6. Ticket Model
 const ticketSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   subject: String,
@@ -89,14 +98,14 @@ const ticketSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Ticket = mongoose.models.Ticket || mongoose.model('Ticket', ticketSchema);
 
-// 6. Notification Model
+// 7. Notification Model
 const notifSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   title: String, message: String, link: String, isRead: { type: Boolean, default: false }
 }, { timestamps: true });
 const Notification = mongoose.models.Notification || mongoose.model('Notification', notifSchema);
 
-// 7. Transaction Model
+// 8. Transaction Model
 const transactionSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -213,14 +222,38 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 // ------------------------------------------
-// 2️⃣ چت هوشمند (RAG + History Memory) 🧠💾
+// 2️⃣ چت هوشمند (Sessions + History + RAG) 🧠💾
 // ------------------------------------------
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
-    const { message, botType, licenseCode } = req.body; 
+    // sessionId هم از فرانت می‌آید (اگر null باشد یعنی چت جدید)
+    let { message, botType, licenseCode, sessionId } = req.body; 
     const user = req.user;
 
-    // الف) پاسخ به سلام (بدون هزینه)
+    // --- مدیریت سشن (New Chat vs History) ---
+    let currentSession;
+    let isNewSession = false;
+
+    if (sessionId) {
+        // اگر ID فرستاد، پیداش کن
+        currentSession = await ChatSession.findById(sessionId);
+        if (!currentSession || currentSession.user.toString() !== user.id) {
+            return res.status(404).json({ message: 'نشست گفتگو یافت نشد.' });
+        }
+    } else {
+        // اگر ID نفرستاد، یکی بساز (New Chat)
+        isNewSession = true;
+        // عنوان چت را از ۱۰ کلمه اول پیام می‌سازیم
+        const generatedTitle = message.split(' ').slice(0, 6).join(' ') + '...';
+        currentSession = await ChatSession.create({
+            user: user._id,
+            botType: botType,
+            title: generatedTitle
+        });
+        sessionId = currentSession._id;
+    }
+
+    // --- سلام و احوالپرسی ---
     const greetings = ['سلام', 'درود', 'خسته نباشید', 'چطوری', 'خوبی', 'صبح بخیر', 'شب بخیر', 'hi', 'hello'];
     const isGreeting = greetings.some(g => message.trim().toLowerCase().startsWith(g)) && message.length < 30;
 
@@ -229,11 +262,13 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         return res.json({ 
             response: `سلام! من دستیار هوشمند ${botName} هستم. لطفاً علائم و مشکل حیوان را توضیح دهید تا بررسی کنم.`, 
             remainingTokens: user.tokens, 
-            isFallback: false 
+            isFallback: false,
+            sessionId: currentSession._id, // شناسه سشن را برمی‌گردانیم
+            title: currentSession.title
         });
     }
 
-    // ب) بررسی اعتبار
+    // --- بررسی اعتبار ---
     let activeLicense = null;
     let useUserTokens = false;
 
@@ -249,20 +284,18 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         useUserTokens = true;
     }
 
-    // 🔥🔥🔥 پ) دریافت ۵ پیام آخر (Memory) 🔥🔥🔥
-    // این بخش باعث می‌شود ربات پیام‌های قبلی را به یاد بیاورد
-    const historyLogs = await ChatLog.find({ user: user._id, botType })
-        .sort({ timestamp: -1 }) // جدیدترین‌ها اول
-        .limit(5); // ۵ تعامل آخر (۱۰ پیام: ۵ سوال + ۵ جواب)
-    
-    // تبدیل به فرمت OpenAI و مرتب‌سازی از قدیمی به جدید
+    // --- حافظه: فقط پیام‌های همین سشن! ---
+    const historyLogs = await ChatLog.find({ session: sessionId })
+        .sort({ timestamp: -1 })
+        .limit(6); // ۶ پیام آخر همین گفتگو
+
     const historyMessages = historyLogs.reverse().flatMap(log => [
         { role: "user", content: log.question },
         { role: "assistant", content: log.answer }
     ]);
 
-    // ت) جستجو در دیتابیس (RAG - Keyword Search)
-    const stopWords = ['اقا', 'آقا', 'من', 'تو', 'ما', 'شما', 'است', 'که', 'در', 'با', 'از', 'به', 'را', 'این', 'آن', 'زنبور', 'عسل', 'دارم', 'داره', 'هست', 'اره', 'آره', 'بله', 'خیر', 'نه', 'ندارم', 'ولی']; 
+    // --- RAG (جستجو) ---
+    const stopWords = ['اقا', 'آقا', 'من', 'تو', 'ما', 'شما', 'است', 'که', 'در', 'با', 'از', 'به', 'را', 'این', 'آن', 'زنبور', 'عسل', 'دارم', 'داره', 'هست']; 
     const cleanMessage = message.replace(/[،؛:!?.()]/g, ''); 
     const words = cleanMessage.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
 
@@ -282,47 +315,39 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     let referenceText = "";
     let shouldDeductToken = false; 
 
-    // ⛔ لاجیک هوشمند: (Search vs Memory)
-    // اگر دیتابیس خالی بود اما کاربر دارد به سوال قبلی جواب می‌دهد (تاریخچه داریم)، نباید خطا بدهیم.
+    // --- لاجیک هوشمند ---
     const isFollowUp = historyMessages.length > 0 && relatedDocs.length === 0;
 
     if (relatedDocs.length === 0 && !isFollowUp) {
-        // حالت ۱: نه دیتایی هست، نه حافظه‌ای (بحث جدید و نامربوط)
-        aiAnswer = "متاسفانه با این کلمات، اطلاعاتی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را کامل‌تر توضیح دهید.";
+        aiAnswer = "متاسفانه با این کلمات کلیدی، اطلاعاتی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را با جزئیات بیشتری توضیح دهید.";
         referenceText = "بدون منبع";
-        shouldDeductToken = false; 
+        shouldDeductToken = false;
     } else {
-        // حالت ۲: یا دیتای جدید داریم، یا داریم از حافظه (History) استفاده می‌کنیم
         shouldDeductToken = true;
         
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         referenceText = relatedDocs.length > 0 ? relatedDocs.map(doc => doc.title).join(", ") : "حافظه گفتگو";
         const botTitle = BOT_TITLES[botType] || botType;
 
-        // 🔥 پرامپت دکتر با حافظه ۵ تایی 🔥
         const systemPrompt = `
             شما یک "دامپزشک متخصص" و هوشمند در زمینه "${botTitle}" هستید.
             
-            منابع دانش جدید (CONTEXT):
+            اطلاعات مرجع (CONTEXT):
             ${contextData ? contextData : "اطلاعات جدیدی یافت نشد، فقط به حافظه گفتگو (History) مراجعه کن."}
 
             دستورالعمل حیاتی (Diagnosis Protocol):
-            1. شما به ۵ پیام آخر گفتگو دسترسی دارید.
-            2. اگر کاربر پاسخی کوتاه داد (مثل "بله"، "خیر"، "همینطوره")، آن را در کنار سوال قبلی خودت در History تحلیل کن.
-            3. تشخیص بیماری:
-               - اگر با ترکیب پاسخ جدید کاربر و اطلاعات قبلی، بیماری قطعی شد -> درمان را کامل توضیح بده.
-               - اگر هنوز شک داری -> سوال بعدی را بپرس تا علائم شفاف شود.
-            
-            4. فقط از اطلاعات CONTEXT و History استفاده کن. دانش عمومی ممنوع.
-            5. لحن: دلسوزانه و علمی.
+            1. به ۵ پیام آخر این گفتگو (History) دسترسی داری.
+            2. سوال کاربر را در ادامه گفتگو تحلیل کن.
+            3. اگر کاربر علائم ناقص گفت، سوال بپرس.
+            4. فقط از CONTEXT و History استفاده کن. دانش عمومی ممنوع.
         `;
 
         const response = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
             messages: [
                 { role: "system", content: systemPrompt },
-                ...historyMessages, // 👈 تزریق تاریخچه پیام‌های قبلی
-                { role: "user", content: message } // پیام جدید
+                ...historyMessages,
+                { role: "user", content: message }
             ],
             temperature: 0.3, 
         });
@@ -330,7 +355,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         aiAnswer = response.choices[0].message.content;
     }
 
-    // ث) کسر اعتبار
+    // --- کسر اعتبار ---
     if (shouldDeductToken) {
         if (useUserTokens) {
             user.tokens -= 1;
@@ -341,9 +366,10 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    // ج) ذخیره لاگ
+    // --- ذخیره پیام در این سشن ---
     await ChatLog.create({
         user: user._id,
+        session: sessionId, // 👈 ذخیره با شناسه سشن
         botType: botType,
         question: message,
         answer: aiAnswer,
@@ -355,7 +381,8 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     res.json({ 
         response: aiAnswer, 
         remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
-        isFallback: relatedDocs.length === 0 && !isFollowUp
+        sessionId: sessionId, // ID سشن را برمی‌گردانیم تا فرانت ذخیره کند
+        title: currentSession.title
     });
 
   } catch (error) {
@@ -365,14 +392,44 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 });
 
 
-// ------------------------------------------
-// 3️⃣ تاریخچه چت (API)
-// ------------------------------------------
-app.get('/api/chat/history', authenticateToken, async (req, res) => {
+// ==========================================
+// 3️⃣ روت‌های مدیریت تاریخچه (Sidebar) 📂
+// ==========================================
+
+// دریافت لیست سشن‌ها (برای سایدبار)
+app.get('/api/chat/sessions', authenticateToken, async (req, res) => {
     try {
-        const history = await ChatLog.find({ user: req.user.id }).sort({ timestamp: -1 });
-        res.json(history);
-    } catch (error) { res.status(500).json({ message: 'خطا در دریافت تاریخچه' }); }
+        const { botType } = req.query; // مثلا ?botType=bee
+        const filter = { user: req.user.id };
+        if (botType) filter.botType = botType;
+
+        const sessions = await ChatSession.find(filter)
+            .sort({ updatedAt: -1 }) // آخرین گفتگوها اول
+            .limit(20);
+            
+        res.json(sessions);
+    } catch (error) { res.status(500).json({ message: 'خطا در دریافت لیست گفتگوها' }); }
+});
+
+// دریافت پیام‌های یک سشن خاص (وقتی روی سایدبار کلیک میشه)
+app.get('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
+    try {
+        const messages = await ChatLog.find({ 
+            session: req.params.id, 
+            user: req.user.id 
+        }).sort({ timestamp: 1 }); // از قدیم به جدید برای نمایش
+        
+        res.json(messages);
+    } catch (error) { res.status(500).json({ message: 'خطا در بارگذاری گفتگو' }); }
+});
+
+// حذف یک سشن
+app.delete('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
+    try {
+        await ChatSession.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+        await ChatLog.deleteMany({ session: req.params.id }); // پاک کردن پیام‌هایش
+        res.json({ message: 'گفتگو حذف شد' });
+    } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
 
 
