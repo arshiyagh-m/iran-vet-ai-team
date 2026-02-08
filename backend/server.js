@@ -63,7 +63,7 @@ const kbSchema = new mongoose.Schema({
 });
 const KnowledgeBase = mongoose.models.KnowledgeBase || mongoose.model('KnowledgeBase', kbSchema);
 
-// 4. ChatSession Model (جدید: برای مدیریت نشست‌های گفتگو) 🔥
+// 4. ChatSession Model (مدیریت نشست‌های گفتگو) 🔥
 const sessionSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   botType: String, // مثلاً bee, dog
@@ -71,7 +71,7 @@ const sessionSchema = new mongoose.Schema({
 }, { timestamps: true });
 const ChatSession = mongoose.models.ChatSession || mongoose.model('ChatSession', sessionSchema);
 
-// 5. ChatLog Model (آپدیت شده با sessionId)
+// 5. ChatLog Model (با فیلد SessionId)
 const chatLogSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   session: { type: mongoose.Schema.Types.ObjectId, ref: 'ChatSession' }, // ارتباط با سشن
@@ -222,7 +222,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 // ------------------------------------------
-// 2️⃣ چت هوشمند (Sessions + History + RAG) 🧠💾
+// 2️⃣ چت هوشمند (GPT-4o + Smart Search + Memory) 🧠🚀
 // ------------------------------------------
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
@@ -232,18 +232,13 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
     // --- مدیریت سشن (New Chat vs History) ---
     let currentSession;
-    let isNewSession = false;
-
     if (sessionId) {
-        // اگر ID فرستاد، پیداش کن
         currentSession = await ChatSession.findById(sessionId);
         if (!currentSession || currentSession.user.toString() !== user.id) {
             return res.status(404).json({ message: 'نشست گفتگو یافت نشد.' });
         }
     } else {
-        // اگر ID نفرستاد، یکی بساز (New Chat)
-        isNewSession = true;
-        // عنوان چت را از ۱۰ کلمه اول پیام می‌سازیم
+        // ایجاد سشن جدید
         const generatedTitle = message.split(' ').slice(0, 6).join(' ') + '...';
         currentSession = await ChatSession.create({
             user: user._id,
@@ -260,10 +255,10 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     if (isGreeting) {
         const botName = BOT_TITLES[botType] || 'دامپزشکی';
         return res.json({ 
-            response: `سلام! من دستیار هوشمند ${botName} هستم. لطفاً علائم و مشکل حیوان را توضیح دهید تا بررسی کنم.`, 
+            response: `سلام! من دستیار هوشمند ${botName} هستم. لطفاً مشکل حیوان خود را بفرمایید تا بررسی کنم.`, 
             remainingTokens: user.tokens, 
             isFallback: false,
-            sessionId: currentSession._id, // شناسه سشن را برمی‌گردانیم
+            sessionId: currentSession._id, 
             title: currentSession.title
         });
     }
@@ -284,7 +279,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         useUserTokens = true;
     }
 
-    // --- حافظه: فقط پیام‌های همین سشن! ---
+    // --- دریافت تاریخچه (Memory) ---
     const historyLogs = await ChatLog.find({ session: sessionId })
         .sort({ timestamp: -1 })
         .limit(6); // ۶ پیام آخر همین گفتگو
@@ -294,32 +289,44 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         { role: "assistant", content: log.answer }
     ]);
 
-    // --- RAG (جستجو) ---
-    const stopWords = ['اقا', 'آقا', 'من', 'تو', 'ما', 'شما', 'است', 'که', 'در', 'با', 'از', 'به', 'را', 'این', 'آن', 'زنبور', 'عسل', 'دارم', 'داره', 'هست']; 
-    const cleanMessage = message.replace(/[،؛:!?.()]/g, ''); 
-    const words = cleanMessage.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+    // 🔥 مرحله ۱: تبدیل سوال کاربر به کلمات کلیدی (Smart Search)
+    const botTitle = BOT_TITLES[botType] || botType;
+    const searchPrompt = `
+        کاربر سوالی در مورد "${botTitle}" پرسیده است: "${message}"
+        وظیفه تو:
+        1. کلمات کلیدی، هم‌معنی‌های تخصصی و نام بیماری‌های مرتبط را استخراج کن.
+        2. اگر کاربر اصطلاح عامیانه گفت، معادل علمی آن را اضافه کن.
+        3. فقط کلمات را با فاصله (Space) جدا کن. هیچ توضیحی نده.
+    `;
 
-    let searchCondition = {};
-    if (words.length > 0) {
-        searchCondition = {
-            category: botType,
-            $or: words.map(word => ({ content: { $regex: word, $options: 'i' } }))
-        };
-    } else {
-        searchCondition = { category: botType, content: { $regex: message, $options: 'i' } };
-    }
+    const keywordExtraction = await openai.chat.completions.create({
+        model: "gpt-4o-mini", // مدل هوشمند و ارزان
+        messages: [{ role: "system", content: "فقط کلمات کلیدی استخراج کن." }, { role: "user", content: searchPrompt }],
+        temperature: 0.3,
+    });
 
-    const relatedDocs = await KnowledgeBase.find(searchCondition).limit(3);
+    const smartKeywords = keywordExtraction.choices[0].message.content.split(/\s+/);
 
+    // 🔥 مرحله ۲: جستجوی ترکیبی (متن کاربر + کلمات هوشمند)
+    let searchCondition = {
+        category: botType,
+        $or: [
+            { content: { $regex: message, $options: 'i' } }, // عین جمله کاربر
+            ...smartKeywords.map(word => ({ content: { $regex: word, $options: 'i' } })) // کلمات هوشمند
+        ]
+    };
+
+    const relatedDocs = await KnowledgeBase.find(searchCondition).limit(4);
+
+    // --- تولید پاسخ نهایی ---
     let aiAnswer = "";
     let referenceText = "";
     let shouldDeductToken = false; 
 
-    // --- لاجیک هوشمند ---
     const isFollowUp = historyMessages.length > 0 && relatedDocs.length === 0;
 
     if (relatedDocs.length === 0 && !isFollowUp) {
-        aiAnswer = "متاسفانه با این کلمات کلیدی، اطلاعاتی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را با جزئیات بیشتری توضیح دهید.";
+        aiAnswer = "متاسفانه اطلاعات دقیقی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را با جزئیات بیشتری توضیح دهید.";
         referenceText = "بدون منبع";
         shouldDeductToken = false;
     } else {
@@ -327,29 +334,29 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         referenceText = relatedDocs.length > 0 ? relatedDocs.map(doc => doc.title).join(", ") : "حافظه گفتگو";
-        const botTitle = BOT_TITLES[botType] || botType;
 
         const systemPrompt = `
-            شما یک "دامپزشک متخصص" و هوشمند در زمینه "${botTitle}" هستید.
+            شما یک "دامپزشک متخصص" و فوق‌العاده باهوش در زمینه "${botTitle}" هستید.
             
-            اطلاعات مرجع (CONTEXT):
+            اطلاعات علمی (CONTEXT):
             ${contextData ? contextData : "اطلاعات جدیدی یافت نشد، فقط به حافظه گفتگو (History) مراجعه کن."}
 
             دستورالعمل حیاتی (Diagnosis Protocol):
             1. به ۵ پیام آخر این گفتگو (History) دسترسی داری.
-            2. سوال کاربر را در ادامه گفتگو تحلیل کن.
-            3. اگر کاربر علائم ناقص گفت، سوال بپرس.
-            4. فقط از CONTEXT و History استفاده کن. دانش عمومی ممنوع.
+            2. سوال کاربر را در ادامه گفتگو تحلیل کن (اگر گفت "بله"، یعنی تایید سوال قبلی تو).
+            3. اگر کاربر علائم را عامیانه گفت، تو تخصصی تحلیل کن.
+            4. اگر اطلاعات کافی نیست، مثل یک دکتر سوال بپرس.
+            5. فقط از CONTEXT و History استفاده کن. دانش عمومی ممنوع.
         `;
 
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o-mini", // استفاده از مدل قدرتمندتر برای پاسخ نهایی
             messages: [
                 { role: "system", content: systemPrompt },
                 ...historyMessages,
                 { role: "user", content: message }
             ],
-            temperature: 0.3, 
+            temperature: 0.4, 
         });
 
         aiAnswer = response.choices[0].message.content;
@@ -369,7 +376,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     // --- ذخیره پیام در این سشن ---
     await ChatLog.create({
         user: user._id,
-        session: sessionId, // 👈 ذخیره با شناسه سشن
+        session: sessionId,
         botType: botType,
         question: message,
         answer: aiAnswer,
@@ -381,7 +388,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     res.json({ 
         response: aiAnswer, 
         remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
-        sessionId: sessionId, // ID سشن را برمی‌گردانیم تا فرانت ذخیره کند
+        sessionId: sessionId, 
         title: currentSession.title
     });
 
@@ -396,28 +403,28 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 // 3️⃣ روت‌های مدیریت تاریخچه (Sidebar) 📂
 // ==========================================
 
-// دریافت لیست سشن‌ها (برای سایدبار)
+// دریافت لیست سشن‌ها
 app.get('/api/chat/sessions', authenticateToken, async (req, res) => {
     try {
-        const { botType } = req.query; // مثلا ?botType=bee
+        const { botType } = req.query; 
         const filter = { user: req.user.id };
         if (botType) filter.botType = botType;
 
         const sessions = await ChatSession.find(filter)
-            .sort({ updatedAt: -1 }) // آخرین گفتگوها اول
+            .sort({ updatedAt: -1 }) 
             .limit(20);
             
         res.json(sessions);
     } catch (error) { res.status(500).json({ message: 'خطا در دریافت لیست گفتگوها' }); }
 });
 
-// دریافت پیام‌های یک سشن خاص (وقتی روی سایدبار کلیک میشه)
+// دریافت پیام‌های یک سشن خاص
 app.get('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
     try {
         const messages = await ChatLog.find({ 
             session: req.params.id, 
             user: req.user.id 
-        }).sort({ timestamp: 1 }); // از قدیم به جدید برای نمایش
+        }).sort({ timestamp: 1 }); 
         
         res.json(messages);
     } catch (error) { res.status(500).json({ message: 'خطا در بارگذاری گفتگو' }); }
@@ -427,7 +434,7 @@ app.get('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
 app.delete('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
     try {
         await ChatSession.findOneAndDelete({ _id: req.params.id, user: req.user.id });
-        await ChatLog.deleteMany({ session: req.params.id }); // پاک کردن پیام‌هایش
+        await ChatLog.deleteMany({ session: req.params.id }); 
         res.json({ message: 'گفتگو حذف شد' });
     } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
