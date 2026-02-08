@@ -46,7 +46,7 @@ const App = () => {
   }, [pathname]);
 
   return (
-    <div className="font-sans dir-rtl min-h-screen bg-gray-50 text-gray-800">
+    <div className="font-sans dir-rtl min-h-screen bg-gray-50 text-gray-800 animate-fadeIn">
       <ToastContainer position="top-right" rtl={true} theme="colored" />
       
       <Routes>
@@ -69,11 +69,16 @@ const App = () => {
           <Route path="tickets" element={<Tickets />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="change-password" element={<ChangePassword />} />
+          
+          {/* 👇 تغییرات اینجاست: دو حالت برای چت */}
+          {/* حالت اول: چت جدید (مثلاً /dashboard/chat/bee) */}
           <Route path="chat/:type" element={<BotChat />} />
+          
+          {/* حالت دوم: ادامه چت قدیمی (مثلاً /dashboard/chat/bee/65a1b...) */}
+          <Route path="chat/:type/:sessionId" element={<BotChat />} />
         </Route>
 
         {/* ۳. پنل مدیریت (محافظت شده) 🔒✅ */}
-        {/* فقط اگر AdminRoute اجازه دهد، وارد این بخش می‌شود */}
         <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
