@@ -124,7 +124,7 @@ const BOT_TITLES = {
 
 
 // ==========================================
-// 🛡️ میدل‌ور احراز هویت (با قابلیت چک کردن بن)
+// 🛡️ میدل‌ور احراز هویت
 // ==========================================
 const authenticateToken = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
@@ -213,7 +213,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 // ------------------------------------------
-// 2️⃣ چت هوشمند (دکتر هوشمند + جستجوی پیشرفته) 🩺🧠
+// 2️⃣ چت هوشمند (RAG + History Memory) 🧠💾
 // ------------------------------------------
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
@@ -233,7 +233,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         });
     }
 
-    // ب) بررسی اعتبار (بدون تغییر)
+    // ب) بررسی اعتبار
     let activeLicense = null;
     let useUserTokens = false;
 
@@ -249,20 +249,30 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         useUserTokens = true;
     }
 
-    // پ) جستجو در دیتابیس (بر اساس کلمات کلیدی - ارتقا یافته) 🔥
-    const stopWords = ['اقا', 'آقا', 'من', 'تو', 'ما', 'شما', 'است', 'که', 'در', 'با', 'از', 'به', 'را', 'این', 'آن', 'زنبور', 'عسل', 'دارم', 'داره', 'هست']; 
+    // 🔥🔥🔥 پ) دریافت ۵ پیام آخر (Memory) 🔥🔥🔥
+    // این بخش باعث می‌شود ربات پیام‌های قبلی را به یاد بیاورد
+    const historyLogs = await ChatLog.find({ user: user._id, botType })
+        .sort({ timestamp: -1 }) // جدیدترین‌ها اول
+        .limit(5); // ۵ تعامل آخر (۱۰ پیام: ۵ سوال + ۵ جواب)
+    
+    // تبدیل به فرمت OpenAI و مرتب‌سازی از قدیمی به جدید
+    const historyMessages = historyLogs.reverse().flatMap(log => [
+        { role: "user", content: log.question },
+        { role: "assistant", content: log.answer }
+    ]);
+
+    // ت) جستجو در دیتابیس (RAG - Keyword Search)
+    const stopWords = ['اقا', 'آقا', 'من', 'تو', 'ما', 'شما', 'است', 'که', 'در', 'با', 'از', 'به', 'را', 'این', 'آن', 'زنبور', 'عسل', 'دارم', 'داره', 'هست', 'اره', 'آره', 'بله', 'خیر', 'نه', 'ندارم', 'ولی']; 
     const cleanMessage = message.replace(/[،؛:!?.()]/g, ''); 
     const words = cleanMessage.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
 
     let searchCondition = {};
     if (words.length > 0) {
-        // اگر کلمات کلیدی پیدا شد
         searchCondition = {
             category: botType,
             $or: words.map(word => ({ content: { $regex: word, $options: 'i' } }))
         };
     } else {
-        // جستجوی کلی
         searchCondition = { category: botType, content: { $regex: message, $options: 'i' } };
     }
 
@@ -272,52 +282,55 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     let referenceText = "";
     let shouldDeductToken = false; 
 
-    // ⛔ لاجیک دکتر هوشمند (تشخیص و پرسشگری)
-    if (relatedDocs.length === 0) {
-        aiAnswer = "متاسفانه با این کلمات کلیدی، اطلاعاتی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را با جزئیات بیشتری توضیح دهید.";
+    // ⛔ لاجیک هوشمند: (Search vs Memory)
+    // اگر دیتابیس خالی بود اما کاربر دارد به سوال قبلی جواب می‌دهد (تاریخچه داریم)، نباید خطا بدهیم.
+    const isFollowUp = historyMessages.length > 0 && relatedDocs.length === 0;
+
+    if (relatedDocs.length === 0 && !isFollowUp) {
+        // حالت ۱: نه دیتایی هست، نه حافظه‌ای (بحث جدید و نامربوط)
+        aiAnswer = "متاسفانه با این کلمات، اطلاعاتی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را کامل‌تر توضیح دهید.";
         referenceText = "بدون منبع";
         shouldDeductToken = false; 
     } else {
+        // حالت ۲: یا دیتای جدید داریم، یا داریم از حافظه (History) استفاده می‌کنیم
         shouldDeductToken = true;
         
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
-        referenceText = relatedDocs.map(doc => doc.title).join(", ");
+        referenceText = relatedDocs.length > 0 ? relatedDocs.map(doc => doc.title).join(", ") : "حافظه گفتگو";
         const botTitle = BOT_TITLES[botType] || botType;
 
-        // 🔥 پرامپت دکتر پرسشگر 🔥
+        // 🔥 پرامپت دکتر با حافظه ۵ تایی 🔥
         const systemPrompt = `
             شما یک "دامپزشک متخصص" و هوشمند در زمینه "${botTitle}" هستید.
             
-            اطلاعات مرجع (CONTEXT):
-            ${contextData}
+            منابع دانش جدید (CONTEXT):
+            ${contextData ? contextData : "اطلاعات جدیدی یافت نشد، فقط به حافظه گفتگو (History) مراجعه کن."}
 
             دستورالعمل حیاتی (Diagnosis Protocol):
-            1. هدف شما تشخیص بیماری بر اساس "اطلاعات مرجع" بالا است.
-            2. ورودی کاربر را بررسی کن:
-               - اگر کاربر **تمام علائم** یک بیماری موجود در متن را گفت: تشخیص نهایی را بده و درمان را از متن بگو.
-               - اگر کاربر **فقط یک علامت** (مثلا فقط "عدم پرواز" یا "بی‌حالی") را گفت و این علامت بین چند بیماری مشترک بود:
-                 🔴 **تشخیص نده!** بلکه شروع کن به پرسیدن سوال درباره سایر علائم موجود در متن برای تفکیک بیماری‌ها.
+            1. شما به ۵ پیام آخر گفتگو دسترسی دارید.
+            2. اگر کاربر پاسخی کوتاه داد (مثل "بله"، "خیر"، "همینطوره")، آن را در کنار سوال قبلی خودت در History تحلیل کن.
+            3. تشخیص بیماری:
+               - اگر با ترکیب پاسخ جدید کاربر و اطلاعات قبلی، بیماری قطعی شد -> درمان را کامل توضیح بده.
+               - اگر هنوز شک داری -> سوال بعدی را بپرس تا علائم شفاف شود.
             
-            3. الگوی پاسخگویی در حالت علائم ناقص:
-               "این علامت می‌تواند نشانه [نام بیماری‌های احتمالی] باشد. آیا علائم دیگری مثل [علامت‌های اختصاصی هر بیماری] را نیز مشاهده می‌کنید؟"
-            
-            4. فقط و فقط از اطلاعات داخل CONTEXT استفاده کن.
-            5. لحن پاسخ: دلسوزانه، علمی و پرسش‌گرانه.
+            4. فقط از اطلاعات CONTEXT و History استفاده کن. دانش عمومی ممنوع.
+            5. لحن: دلسوزانه و علمی.
         `;
 
         const response = await openai.chat.completions.create({
             model: "gpt-3.5-turbo",
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: message }
+                ...historyMessages, // 👈 تزریق تاریخچه پیام‌های قبلی
+                { role: "user", content: message } // پیام جدید
             ],
-            temperature: 0.3, // کمی آزادی برای جمله‌سازی سوالی
+            temperature: 0.3, 
         });
 
         aiAnswer = response.choices[0].message.content;
     }
 
-    // ت) کسر اعتبار
+    // ث) کسر اعتبار
     if (shouldDeductToken) {
         if (useUserTokens) {
             user.tokens -= 1;
@@ -328,7 +341,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    // ث) ذخیره لاگ
+    // ج) ذخیره لاگ
     await ChatLog.create({
         user: user._id,
         botType: botType,
@@ -336,13 +349,13 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         answer: aiAnswer,
         reference: referenceText,
         licenseUsed: licenseCode || 'UserTokens',
-        isFallbackResponse: relatedDocs.length === 0
+        isFallbackResponse: relatedDocs.length === 0 && !isFollowUp
     });
 
     res.json({ 
         response: aiAnswer, 
         remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
-        isFallback: relatedDocs.length === 0 
+        isFallback: relatedDocs.length === 0 && !isFollowUp
     });
 
   } catch (error) {
@@ -353,7 +366,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
 
 // ------------------------------------------
-// 3️⃣ تاریخچه چت
+// 3️⃣ تاریخچه چت (API)
 // ------------------------------------------
 app.get('/api/chat/history', authenticateToken, async (req, res) => {
     try {
