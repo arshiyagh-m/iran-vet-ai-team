@@ -76,7 +76,7 @@ const chatLogSchema = new mongoose.Schema({
 });
 const ChatLog = mongoose.models.ChatLog || mongoose.model('ChatLog', chatLogSchema);
 
-// 5. Ticket Model (Updated for Chat-style)
+// 5. Ticket Model
 const ticketSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   subject: String,
@@ -96,7 +96,7 @@ const notifSchema = new mongoose.Schema({
 }, { timestamps: true });
 const Notification = mongoose.models.Notification || mongoose.model('Notification', notifSchema);
 
-// 7. Transaction Model (For Finance)
+// 7. Transaction Model
 const transactionSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   admin: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -134,11 +134,9 @@ const authenticateToken = (req, res, next) => {
     if (err) return res.status(403).json({ message: 'توکن نامعتبر است' });
 
     try {
-        // چک کردن لحظه‌ای کاربر در دیتابیس
         const user = await User.findById(decoded.id);
         if (!user) return res.status(404).json({ message: 'کاربر یافت نشد' });
 
-        // ⛔ اگر بن شده باشد، دسترسی قطع می‌شود
         if (user.role === 'banned') {
             return res.status(403).json({ message: '⛔ حساب شما مسدود شده است.' });
         }
@@ -168,10 +166,8 @@ app.post('/api/auth/register', async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: 'این ایمیل قبلاً ثبت شده است.' });
     
-    // ایجاد کاربر با 5 توکن هدیه
     const newUser = await User.create({ fullName, email, phone, password, tokens: 5 });
     
-    // ایجاد نوتیفیکیشن خوش‌آمدگویی
     await Notification.create({ 
         user: newUser._id, 
         title: 'خوش آمدید', 
@@ -188,11 +184,10 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email, password }); // (توجه: در پروداکشن باید هش پسورد چک شود)
+    const user = await User.findOne({ email, password }); 
     
     if (!user) return res.status(401).json({ message: 'ایمیل یا رمز عبور اشتباه است.' });
 
-    // ⛔ چک کردن بن بودن هنگام ورود
     if (user.role === 'banned') {
         return res.status(403).json({ 
             message: '⛔ حساب کاربری شما مسدود شده است. لطفاً با پشتیبانی تماس بگیرید.' 
@@ -218,7 +213,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 // ------------------------------------------
-// 2️⃣ چت هوشمند (Strict RAG Mode) 🧠
+// 2️⃣ چت هوشمند (دکتر هوشمند + جستجوی پیشرفته) 🩺🧠
 // ------------------------------------------
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
@@ -232,13 +227,13 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     if (isGreeting) {
         const botName = BOT_TITLES[botType] || 'دامپزشکی';
         return res.json({ 
-            response: `سلام! من دستیار هوشمند و تخصصی ${botName} هستم. سوال خود را بپرسید تا در پایگاه دانش جستجو کنم.`, 
+            response: `سلام! من دستیار هوشمند ${botName} هستم. لطفاً علائم و مشکل حیوان را توضیح دهید تا بررسی کنم.`, 
             remainingTokens: user.tokens, 
             isFallback: false 
         });
     }
 
-    // ب) بررسی اعتبار (لایسنس یا توکن)
+    // ب) بررسی اعتبار (بدون تغییر)
     let activeLicense = null;
     let useUserTokens = false;
 
@@ -249,45 +244,65 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     } else {
         if (user.tokens < 1) {
-            return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است. لطفاً حساب خود را شارژ کنید.' });
+            return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است.' });
         }
         useUserTokens = true;
     }
 
-    // پ) جستجو در دیتابیس
-    const relatedDocs = await KnowledgeBase.find({
-        category: botType,
-        content: { $regex: message, $options: 'i' }
-    }).limit(3);
+    // پ) جستجو در دیتابیس (بر اساس کلمات کلیدی - ارتقا یافته) 🔥
+    const stopWords = ['اقا', 'آقا', 'من', 'تو', 'ما', 'شما', 'است', 'که', 'در', 'با', 'از', 'به', 'را', 'این', 'آن', 'زنبور', 'عسل', 'دارم', 'داره', 'هست']; 
+    const cleanMessage = message.replace(/[،؛:!?.()]/g, ''); 
+    const words = cleanMessage.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+
+    let searchCondition = {};
+    if (words.length > 0) {
+        // اگر کلمات کلیدی پیدا شد
+        searchCondition = {
+            category: botType,
+            $or: words.map(word => ({ content: { $regex: word, $options: 'i' } }))
+        };
+    } else {
+        // جستجوی کلی
+        searchCondition = { category: botType, content: { $regex: message, $options: 'i' } };
+    }
+
+    const relatedDocs = await KnowledgeBase.find(searchCondition).limit(3);
 
     let aiAnswer = "";
     let referenceText = "";
-    let shouldDeductToken = false; // پیش‌فرض: کسر نمی‌شود
+    let shouldDeductToken = false; 
 
-    // ⛔ لاجیک سخت‌گیرانه: اگر داکیومنت نبود، اصلا سمت OpenAI نرو ⛔
+    // ⛔ لاجیک دکتر هوشمند (تشخیص و پرسشگری)
     if (relatedDocs.length === 0) {
-        // حالت ۱: اطلاعات نیست -> خطا بده و پول کم نکن
-        aiAnswer = "متاسفانه اطلاعاتی در مورد این موضوع در پایگاه دانش تخصصی من یافت نشد. لطفاً با یک دامپزشک مشورت کنید.";
+        aiAnswer = "متاسفانه با این کلمات کلیدی، اطلاعاتی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را با جزئیات بیشتری توضیح دهید.";
         referenceText = "بدون منبع";
         shouldDeductToken = false; 
     } else {
-        // حالت ۲: اطلاعات هست -> بفرست به OpenAI با دمای صفر
         shouldDeductToken = true;
         
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         referenceText = relatedDocs.map(doc => doc.title).join(", ");
         const botTitle = BOT_TITLES[botType] || botType;
 
+        // 🔥 پرامپت دکتر پرسشگر 🔥
         const systemPrompt = `
-            شما یک دستیار هوشمند متخصص در زمینه "${botTitle}" هستید.
+            شما یک "دامپزشک متخصص" و هوشمند در زمینه "${botTitle}" هستید.
             
-            🔴 دستورالعمل بسیار مهم (Strict Rules):
-            1. به سوال کاربر **فقط و فقط** با استفاده از متن‌های زیر ("CONTEXT") پاسخ بده.
-            2. حق استفاده از دانش عمومی خودت را نداری.
-            3. پاسخ را کاملاً علمی، دقیق و به زبان فارسی بنویس.
-
-            CONTEXT:
+            اطلاعات مرجع (CONTEXT):
             ${contextData}
+
+            دستورالعمل حیاتی (Diagnosis Protocol):
+            1. هدف شما تشخیص بیماری بر اساس "اطلاعات مرجع" بالا است.
+            2. ورودی کاربر را بررسی کن:
+               - اگر کاربر **تمام علائم** یک بیماری موجود در متن را گفت: تشخیص نهایی را بده و درمان را از متن بگو.
+               - اگر کاربر **فقط یک علامت** (مثلا فقط "عدم پرواز" یا "بی‌حالی") را گفت و این علامت بین چند بیماری مشترک بود:
+                 🔴 **تشخیص نده!** بلکه شروع کن به پرسیدن سوال درباره سایر علائم موجود در متن برای تفکیک بیماری‌ها.
+            
+            3. الگوی پاسخگویی در حالت علائم ناقص:
+               "این علامت می‌تواند نشانه [نام بیماری‌های احتمالی] باشد. آیا علائم دیگری مثل [علامت‌های اختصاصی هر بیماری] را نیز مشاهده می‌کنید؟"
+            
+            4. فقط و فقط از اطلاعات داخل CONTEXT استفاده کن.
+            5. لحن پاسخ: دلسوزانه، علمی و پرسش‌گرانه.
         `;
 
         const response = await openai.chat.completions.create({
@@ -296,13 +311,13 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 { role: "system", content: systemPrompt },
                 { role: "user", content: message }
             ],
-            temperature: 0, // خلاقیت صفر
+            temperature: 0.3, // کمی آزادی برای جمله‌سازی سوالی
         });
 
         aiAnswer = response.choices[0].message.content;
     }
 
-    // ت) کسر اعتبار (فقط اگر پاسخ داده باشد)
+    // ت) کسر اعتبار
     if (shouldDeductToken) {
         if (useUserTokens) {
             user.tokens -= 1;
@@ -313,7 +328,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    // ث) ذخیره لاگ چت
+    // ث) ذخیره لاگ
     await ChatLog.create({
         user: user._id,
         botType: botType,
@@ -351,7 +366,6 @@ app.get('/api/chat/history', authenticateToken, async (req, res) => {
 // ------------------------------------------
 // 4️⃣ سیستم تیکت (Tickets)
 // ------------------------------------------
-// ثبت تیکت جدید
 app.post('/api/tickets', authenticateToken, async (req, res) => {
     try {
         await Ticket.create({ 
@@ -363,13 +377,11 @@ app.post('/api/tickets', authenticateToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'Error creating ticket' }); }
 });
 
-// دریافت همه تیکت‌های کاربر
 app.get('/api/tickets', authenticateToken, async (req, res) => {
     const tickets = await Ticket.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(tickets);
 });
 
-// دریافت یک تیکت خاص
 app.get('/api/tickets/:id', authenticateToken, async (req, res) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
@@ -379,17 +391,15 @@ app.get('/api/tickets/:id', authenticateToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
 
-// پاسخ کاربر به تیکت
 app.post('/api/tickets/:id/reply', authenticateToken, async (req, res) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
         if (!ticket) return res.status(404).json({ message: 'یافت نشد' });
         
-        // کاربر فقط به تیکت خودش دسترسی دارد
         if (ticket.user.toString() !== req.user.id) return res.status(403).json({ message: 'دسترسی ندارید' });
 
         ticket.messages.push({ sender: 'user', text: req.body.text });
-        ticket.status = 'open'; // وقتی کاربر جواب می‌دهد، وضعیت دوباره باز می‌شود
+        ticket.status = 'open'; 
         await ticket.save();
         res.json({ message: 'پاسخ شما ارسال شد' });
     } catch (error) { res.status(500).json({ message: 'خطا در ارسال پاسخ' }); }
@@ -415,7 +425,6 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 // ------------------------------------------
 app.get('/api/setup/import-bee', async (req, res) => {
     try {
-        // مسیر فایل CSV
         const filePath = path.join(__dirname, 'data', 'bee_data.csv');
         
         if (!fs.existsSync(filePath)) {
@@ -423,12 +432,11 @@ app.get('/api/setup/import-bee', async (req, res) => {
         }
 
         const data = fs.readFileSync(filePath, 'utf8');
-        const rows = data.split('\n').slice(1); // حذف هدر
+        const rows = data.split('\n').slice(1); 
         let count = 0;
 
         for (const row of rows) {
             if (!row.trim()) continue;
-            // CSV: Title, SubCategory, Symptoms, Treatment, Extra
             const cols = row.split(','); 
             if (cols.length >= 4) {
                 const title = cols[0]?.trim();
@@ -439,7 +447,6 @@ app.get('/api/setup/import-bee', async (req, res) => {
 
                 const content = `بیماری: ${title}\nعلائم: ${symptoms}\nدرمان: ${treatment}\nتوضیحات: ${extra}`;
                 
-                // جلوگیری از تکراری
                 const exists = await KnowledgeBase.findOne({ title });
                 if (!exists) {
                     await KnowledgeBase.create({
@@ -465,10 +472,7 @@ app.get('/api/setup/import-bee', async (req, res) => {
 // ------------------------------------------
 // 7️⃣ روت‌های ماژولار (Admin & User Profile)
 // ------------------------------------------
-// روت‌های پنل مدیریت (از فایل routes/adminRoutes.js)
 app.use('/api/admin', adminRoutes);
-
-// روت‌های پروفایل کاربر (از کنترلر)
 app.put('/api/users/profile', authenticateToken, userController.updateProfile);
 app.get('/api/users/profile', authenticateToken, userController.getProfile);
 
