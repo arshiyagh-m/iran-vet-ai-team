@@ -2,27 +2,41 @@ const OpenAI = require('openai');
 const ChatLog = require('../models/ChatLog');
 const User = require('../models/User');
 const KnowledgeBase = require('../models/KnowledgeBase');
-const License = require('../models/License'); // مدل لایسنس را هم اضافه کردیم
+const License = require('../models/License');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// نگاشت نام لاتین به فارسی برای پرامپت
+const BOT_TITLES = {
+    bee: "زنبور عسل",
+    dog: "سگ‌ها",
+    cat: "گربه‌ها",
+    cow: "دام بزرگ",
+    horse: "اسب",
+    poultry: "طیور",
+    fish: "آبزیان",
+    general: "دامپزشکی عمومی"
+};
+
 exports.chat = async (req, res) => {
   try {
-    // ۱. دریافت اطلاعات
+    // ۱. دریافت اطلاعات ورودی
     const { message, botType, licenseCode } = req.body;
     const userId = req.user.id;
-    let user = await User.findById(userId);
+    const user = await User.findById(userId);
 
-    // --- گام صفر: بررسی سلام و احوال‌پرسی (رایگان) ---
+    // --- گام صفر: پاسخ به سلام و احوال‌پرسی (بدون هزینه) ---
     const greetings = ['سلام', 'درود', 'خسته نباشید', 'چطوری', 'خوبی', 'صبح بخیر', 'شب بخیر', 'hi', 'hello'];
+    // اگر پیام کوتاه بود و با سلام شروع می‌شد
     const isGreeting = greetings.some(g => message.trim().toLowerCase().startsWith(g)) && message.length < 30;
 
     if (isGreeting) {
+        const botName = BOT_TITLES[botType] || 'دامپزشکی';
         return res.json({ 
-            response: `سلام! من دستیار هوشمند ${botType === 'general' ? 'دامپزشکی' : botType} هستم. چطور می‌توانم کمکتان کنم؟`, 
-            remainingTokens: user.tokens, // کسر نمی‌شود
+            response: `سلام! من دستیار هوشمند و تخصصی ${botName} هستم. سوال خود را بپرسید تا در پایگاه دانش جستجو کنم.`, 
+            remainingTokens: user.tokens, 
             isFallback: false 
         });
     }
@@ -32,85 +46,73 @@ exports.chat = async (req, res) => {
     let useUserTokens = false;
 
     if (licenseCode) {
-        // اگر کد لایسنس فرستاده شده
+        // بررسی لایسنس
         activeLicense = await License.findOne({ code: licenseCode, isActive: true });
         if (!activeLicense || activeLicense.tokens < 1) {
             return res.status(400).json({ message: 'لایسنس نامعتبر یا فاقد اعتبار است.' });
         }
     } else {
-        // استفاده از توکن شخصی
+        // بررسی توکن کاربر
         if (user.tokens < 1) {
-            return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است.' });
+            return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است. لطفاً حساب خود را شارژ کنید.' });
         }
         useUserTokens = true;
     }
 
-    // --- گام دو: جستجو در دیتابیس (RAG) ---
+    // --- گام دو: جستجو در دیتابیس (Strict RAG) ---
+    // فقط در دسته‌بندی مربوطه (botType) جستجو می‌کنیم
     const relatedDocs = await KnowledgeBase.find({
         category: botType,
-        content: { $regex: message, $options: 'i' }
-    }).limit(3);
+        content: { $regex: message, $options: 'i' } // جستجوی کلمه کلیدی
+    }).limit(3); // حداکثر ۳ سند مرتبط
 
-    let systemPrompt = "";
-    let isFallback = false;
+    let aiAnswer = "";
     let referenceText = "";
-    let shouldDeductToken = true; // پیش‌فرض: توکن کم شود
+    let shouldDeductToken = false; // پیش‌فرض: توکن کم نمی‌شود مگر جواب پیدا شود
 
-    if (relatedDocs.length > 0) {
-        // ✅ حالت اول: اطلاعات در دیتابیس هست
+    // 🔴 لاجیک اصلی: فقط اگر داکیومنت بود به OpenAI بفرست
+    if (relatedDocs.length === 0) {
+        // حالت ۱: اطلاعاتی در دیتابیس نیست
+        // ⛔ اینجا اصلا به OpenAI وصل نمی‌شویم (صرفه‌جویی در هزینه)
+        aiAnswer = "متاسفانه اطلاعاتی در مورد این موضوع در پایگاه دانش تخصصی من یافت نشد. لطفاً با یک دامپزشک مشورت کنید.";
+        referenceText = "بدون منبع";
+        shouldDeductToken = false; // توکن کم نمی‌کنیم چون جوابی ندادیم
+    } else {
+        // حالت ۲: اطلاعات پیدا شد
+        shouldDeductToken = true; // چون جواب می‌دهیم، توکن کم می‌کنیم
+        
+        // آماده‌سازی متن منبع برای هوش مصنوعی
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         referenceText = relatedDocs.map(doc => doc.title).join(", ");
+        const botTitle = BOT_TITLES[botType] || botType;
+
+        // 🔥 پرامپت سخت‌گیرانه (Strict Prompt)
+        const systemPrompt = `
+        شما یک دستیار هوشمند متخصص در زمینه "${botTitle}" هستید.
         
-        systemPrompt = `
-        شما دستیار دامپزشک متخصص در زمینه "${botType}" هستید.
-        من به شما اطلاعاتی از منابع معتبر خودم می‌دهم. 
-        وظیفه شما این است که **فقط و فقط** با استفاده از این اطلاعات به سوال کاربر پاسخ دهید.
-        
-        اطلاعات منبع:
+        🔴 دستورالعمل بسیار مهم (Strict Rules):
+        1. به سوال کاربر **فقط و فقط** با استفاده از متن‌های زیر ("CONTEXT") پاسخ بده.
+        2. حق استفاده از دانش عمومی خودت را نداری. اگر جواب در متن زیر نیست، بگو "اطلاعات کافی در متن موجود نیست".
+        3. پاسخ را کاملاً علمی، دقیق و به زبان فارسی بنویس.
+
+        CONTEXT:
         ${contextData}
         `;
-    } else {
-        // ⚠️ حالت دوم: اطلاعات نیست (Fallback) -> بررسی مرتبط بودن سوال
-        isFallback = true;
-        referenceText = "دانش عمومی هوش مصنوعی";
-        
-        systemPrompt = `
-        شما یک متخصص دامپزشکی با تجربه در زمینه "${botType}" هستید.
-        
-        دستورالعمل مهم:
-        1. ابتدا بررسی کن آیا سوال کاربر مستقیماً به "${botType}" یا سلامت حیوانات مرتبط است؟
-        2. اگر سوال درباره سیاست، ورزش، قیمت دلار، برنامه‌نویسی یا مسائل غیرمرتبط بود، فقط بگو: "OUT_OF_SCOPE".
-        3. اگر سوال مرتبط بود ولی در دیتابیس نبود، با تکیه بر دانش عمومی پاسخ علمی و دقیق بده.
-        `;
+
+        // ارسال به OpenAI
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: message }
+            ],
+            temperature: 0, // 🔥 دمای صفر: یعنی خلاقیت صفر (فقط واقعیت)
+        });
+
+        aiAnswer = completion.choices[0].message.content;
     }
 
-    // --- گام سه: ارسال به OpenAI ---
-    const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo", // برای صرفه‌جویی (می‌توانید به gpt-4o تغییر دهید)
-        messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: message }
-        ],
-        temperature: isFallback ? 0.5 : 0.2, 
-    });
-
-    let aiAnswer = completion.choices[0].message.content;
-
-    // --- گام چهار: پردازش پاسخ ---
-    if (aiAnswer.includes("OUT_OF_SCOPE")) {
-        // سوال نامرتبط بود
-        aiAnswer = `من ربات تخصصی ${botType} هستم و نمی‌توانم به سوالات خارج از این حیطه (مثل سیاست، دلار و...) پاسخ دهم. لطفاً سوال مرتبط بپرسید.`;
-        shouldDeductToken = false; // ❌ توکن کسر نمی‌شود
-        isFallback = false; 
-    } 
-    else if (isFallback) {
-        // سوال مرتبط بود اما از دانش عمومی پاسخ داده شد
-        const warningStart = "⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و هنوز در دیتابیس اختصاصی ما تایید نشده است.\n\n";
-        const warningEnd = "\n\n🔴 **هشدار:** لطفاً پیش از هرگونه اقدام درمانی، با دامپزشک مشورت کنید.";
-        aiAnswer = warningStart + aiAnswer + warningEnd;
-    }
-
-    // --- گام پنج: کسر اعتبار (فقط اگر لازم باشد) ---
+    // --- گام سه: کسر اعتبار (فقط اگر از دیتابیس جواب داده باشد) ---
     if (shouldDeductToken) {
         if (useUserTokens) {
             user.tokens -= 1;
@@ -121,7 +123,7 @@ exports.chat = async (req, res) => {
         }
     }
 
-    // --- گام شش: ذخیره در لاگ چت ---
+    // --- گام چهار: ذخیره لاگ ---
     const newChat = new ChatLog({
         user: userId,
         botType: botType,
@@ -129,19 +131,19 @@ exports.chat = async (req, res) => {
         answer: aiAnswer,
         reference: referenceText,
         licenseUsed: licenseCode || 'UserTokens',
-        isFallbackResponse: isFallback && shouldDeductToken
+        isFallbackResponse: relatedDocs.length === 0 // اگر داکیومنت نبود، یعنی فال‌بک
     });
     await newChat.save();
 
-    // --- گام هفت: ارسال پاسخ ---
+    // --- گام پنج: ارسال پاسخ به فرانت ---
     res.json({
         response: aiAnswer,
         remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
-        isFallback: isFallback
+        isFallback: relatedDocs.length === 0
     });
 
   } catch (error) {
-    console.error("OpenAI Error:", error);
-    res.status(500).json({ message: 'خطا در برقراری ارتباط با سرویس هوش مصنوعی.' });
+    console.error("Chat Error:", error);
+    res.status(500).json({ message: 'خطا در پردازش درخواست.' });
   }
 };
