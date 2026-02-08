@@ -1,31 +1,36 @@
 const mongoose = require('mongoose');
 
 const chatLogSchema = new mongoose.Schema({
-    // کاربری که سوال پرسیده (ارتباط با کالکشن User)
+    // کاربری که سوال پرسیده
     user: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User', 
         required: true 
     }, 
     
-    // نوع بات (مثلاً: bee, dog, cat یا poultry-industrial)
+    // 🔥 فیلد جدید و حیاتی: ارتباط با نشست گفتگو
+    // این فیلد مشخص می‌کند این پیام مربوط به کدام مکالمه (Session) است
+    session: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'ChatSession' 
+    }, 
+    
+    // نوع بات (مثلاً: bee, dog, cat)
     botType: { type: String, default: 'General' }, 
     
     // سوال کاربر
     question: { type: String, required: true }, 
     
-    // جواب تولید شده توسط هوش مصنوعی
+    // جواب هوش مصنوعی
     answer: { type: String, required: true }, 
     
-    // اگر از دیتابیس خودمان خوانده باشد، اینجا منبع ذکر می‌شود (مثلاً: فایل تغذیه.pdf)
+    // منبع (اگر از دیتابیس پیدا شده باشد)
     reference: { type: String, default: null }, 
     
-    // کد لایسنسی که هزینه از آن کسر شده
+    // لایسنس یا توکن استفاده شده
     licenseUsed: { type: String }, 
     
-    // این فیلد خیلی مهم است:
-    // true = دیتابیس ما جوابی نداشت و هوش مصنوعی از خودش گفت (باید بررسی شود)
-    // false = جواب مستند به دیتابیس ماست
+    // آیا دیتابیس خالی بود و هوش مصنوعی از خودش جواب داد؟
     isFallbackResponse: { type: Boolean, default: false }, 
     
     timestamp: { type: Date, default: Date.now }
