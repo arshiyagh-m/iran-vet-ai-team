@@ -1,20 +1,53 @@
 const mongoose = require('mongoose');
 
 const knowledgeBaseSchema = new mongoose.Schema({
-    // ... فیلدهای قبلی ...
-    category: { type: String, required: true },
-    subCategory: { type: String, required: true },
-    topic: { type: String, required: true },
-    title: { type: String, required: true },
-    content: { type: String, required: true },
+    // دسته‌بندی کلی (مثل: bee, dog, cat) - این اجباری است
+    category: { 
+        type: String, 
+        required: true 
+    },
+
+    // عنوان بیماری یا موضوع - اجباری
+    title: { 
+        type: String, 
+        required: true 
+    },
+
+    // متن اصلی توضیحات - اجباری
+    content: { 
+        type: String, 
+        required: true 
+    },
+
+    // زیرمجموعه (مثل: بیماری‌های انگلی) - اختیاری با مقدار پیش‌فرض
+    subCategory: { 
+        type: String, 
+        default: 'general' 
+    },
+
+    // موضوع دقیق‌تر - اختیاری با مقدار پیش‌فرض
+    topic: { 
+        type: String, 
+        default: 'general' 
+    },
+
+    // تگ‌ها برای جستجو
     tags: [String],
     
-    // فیلد جدید: نام فایل منبع
-    sourceFile: { type: String, required: true }, 
+    // نام فایل منبع (برای اینکه بدانیم از کجا ایمپورت شده) - اختیاری با پیش‌فرض
+    sourceFile: { 
+        type: String, 
+        default: 'manual_entry' 
+    }, 
 
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { 
+        type: Date, 
+        default: Date.now 
+    }
 });
 
+// ایندکس‌گذاری برای جستجوی متنی سریع
 knowledgeBaseSchema.index({ content: 'text', title: 'text', tags: 'text' });
 
-module.exports = mongoose.model('KnowledgeBase', knowledgeBaseSchema);
+// اکسپورت مدل (با جلوگیری از تعریف تکراری)
+module.exports = mongoose.models.KnowledgeBase || mongoose.model('KnowledgeBase', knowledgeBaseSchema);
