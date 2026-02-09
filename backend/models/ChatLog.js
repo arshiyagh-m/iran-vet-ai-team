@@ -8,8 +8,7 @@ const chatLogSchema = new mongoose.Schema({
         required: true 
     }, 
     
-    // 🔥 فیلد جدید و حیاتی: ارتباط با نشست گفتگو
-    // این فیلد مشخص می‌کند این پیام مربوط به کدام مکالمه (Session) است
+    // ارتباط با نشست گفتگو (برای تاریخچه)
     session: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'ChatSession' 
@@ -30,10 +29,22 @@ const chatLogSchema = new mongoose.Schema({
     // لایسنس یا توکن استفاده شده
     licenseUsed: { type: String }, 
     
-    // آیا دیتابیس خالی بود و هوش مصنوعی از خودش جواب داد؟
+    // آیا دیتابیس خالی بود و هوش مصنوعی از خودش جواب داد؟ (برای رنگ قرمز در ادمین)
     isFallbackResponse: { type: Boolean, default: false }, 
+    
+    // 🔥🔥🔥 فیلدهای جدید برای سیستم فیدبک (لایک/دیس‌لایک) 🔥🔥🔥
+    feedback: { 
+        type: String, 
+        enum: ['like', 'dislike', null], // فقط این مقادیر مجازند
+        default: null 
+    },
+    
+    feedbackReason: { type: String, default: null }, // دلیل (مثلاً: "پاسخ ناقص بود")
+    
+    feedbackComment: { type: String, default: null }, // توضیحات متنی کاربر برای ادمین
     
     timestamp: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('ChatLog', chatLogSchema);
+// جلوگیری از خطای OverwriteModelError در صورت ایمپورت چندباره
+module.exports = mongoose.models.ChatLog || mongoose.model('ChatLog', chatLogSchema);
