@@ -7,11 +7,6 @@ const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
 
-// --- ایمپورت روت‌ها و کنترلرها ---
-// مطمئن شوید فایل‌های adminRoutes.js و userController.js در پوشه‌های مربوطه وجود دارند
-const adminRoutes = require('./routes/adminRoutes');
-const userController = require('./controllers/userController');
-
 // --- تنظیمات اولیه سرور ---
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,7 +25,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 
 // ==========================================
-// 📌 تعریف مدل‌ها (Models)
+// 📌 تعریف مدل‌ها (Models) - اول باید اینها اجرا شوند
 // ==========================================
 
 // 1. User Model (کاربران)
@@ -132,6 +127,12 @@ const transactionSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now }
 });
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
+
+
+// 👇👇👇 ایمپورت‌ها را به اینجا منتقل کردیم (بعد از تعریف مدل‌ها) 👇👇👇
+// مطمئن شوید فایل‌های adminRoutes.js و userController.js در پوشه‌های مربوطه وجود دارند
+const adminRoutes = require('./routes/adminRoutes');
+const userController = require('./controllers/userController');
 
 
 // ==========================================
@@ -456,7 +457,8 @@ app.post('/api/chat/:id/feedback', authenticateToken, async (req, res) => {
 // ------------------------------------------
 // 4️⃣ مدیریت تاریخچه و سشن‌ها (Sidebar)
 // ------------------------------------------
-// لیست سشن‌ها
+
+// دریافت لیست سشن‌ها (برای سایدبار یا صفحه تاریخچه)
 app.get('/api/chat/sessions', authenticateToken, async (req, res) => {
     try {
         const { botType } = req.query; 
@@ -464,29 +466,29 @@ app.get('/api/chat/sessions', authenticateToken, async (req, res) => {
         if (botType) filter.botType = botType;
 
         const sessions = await ChatSession.find(filter)
-            .sort({ updatedAt: -1 }) 
+            .sort({ updatedAt: -1 }) // آخرین گفتگوها اول
             .limit(20);
             
         res.json(sessions);
-    } catch (error) { res.status(500).json({ message: 'خطا در دریافت لیست' }); }
+    } catch (error) { res.status(500).json({ message: 'خطا در دریافت لیست گفتگوها' }); }
 });
 
-// جزئیات پیام‌های یک سشن
+// دریافت پیام‌های یک سشن خاص (وقتی روی سایدبار کلیک میشه)
 app.get('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
     try {
         const messages = await ChatLog.find({ 
             session: req.params.id, 
             user: req.user.id 
-        }).sort({ timestamp: 1 }); // از قدیم به جدید
+        }).sort({ timestamp: 1 }); // از قدیم به جدید برای نمایش
         
         res.json(messages);
     } catch (error) { res.status(500).json({ message: 'خطا در بارگذاری گفتگو' }); }
 });
 
-// حذف سشن
+// حذف یک سشن
 app.delete('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
     try {
-        // حذف سشن
+        // حذف خود سشن
         await ChatSession.findOneAndDelete({ _id: req.params.id, user: req.user.id });
         // حذف تمام پیام‌های داخل آن سشن
         await ChatLog.deleteMany({ session: req.params.id }); 
@@ -506,7 +508,7 @@ app.post('/api/tickets', authenticateToken, async (req, res) => {
             messages: [{ sender: 'user', text: req.body.message }] 
         });
         res.status(201).json({ message: 'تیکت شما با موفقیت ثبت شد.' });
-    } catch (error) { res.status(500).json({ message: 'خطا' }); }
+    } catch (error) { res.status(500).json({ message: 'Error creating ticket' }); }
 });
 
 app.get('/api/tickets', authenticateToken, async (req, res) => {
@@ -517,7 +519,8 @@ app.get('/api/tickets', authenticateToken, async (req, res) => {
 app.get('/api/tickets/:id', authenticateToken, async (req, res) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
-        if (!ticket || ticket.user.toString() !== req.user.id) return res.status(403).json({ message: 'دسترسی ندارید' });
+        if (!ticket) return res.status(404).json({ message: 'یافت نشد' });
+        if (ticket.user.toString() !== req.user.id) return res.status(403).json({ message: 'دسترسی ندارید' });
         res.json(ticket);
     } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
@@ -525,7 +528,9 @@ app.get('/api/tickets/:id', authenticateToken, async (req, res) => {
 app.post('/api/tickets/:id/reply', authenticateToken, async (req, res) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
-        if (!ticket || ticket.user.toString() !== req.user.id) return res.status(403).json({ message: 'دسترسی ندارید' });
+        if (!ticket) return res.status(404).json({ message: 'یافت نشد' });
+        
+        if (ticket.user.toString() !== req.user.id) return res.status(403).json({ message: 'دسترسی ندارید' });
 
         ticket.messages.push({ sender: 'user', text: req.body.text });
         ticket.status = 'open'; 
@@ -536,7 +541,7 @@ app.post('/api/tickets/:id/reply', authenticateToken, async (req, res) => {
 
 
 // ------------------------------------------
-// 6️⃣ نوتیفیکیشن‌ها
+// 6️⃣ نوتیفیکیشن‌ها (Notifications)
 // ------------------------------------------
 app.get('/api/notifications', authenticateToken, async (req, res) => {
     const notifs = await Notification.find({ user: req.user.id }).sort({ createdAt: -1 });
@@ -550,14 +555,14 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 
 
 // ------------------------------------------
-// 7️⃣ ایمپورت دیتابیس (CSV)
+// 7️⃣ روت ایمپورت دیتابیس (CSV Import)
 // ------------------------------------------
 app.get('/api/setup/import-bee', async (req, res) => {
     try {
         const filePath = path.join(__dirname, 'data', 'bee_data.csv');
         
         if (!fs.existsSync(filePath)) {
-            return res.status(404).json({ message: '❌ فایل bee_data.csv یافت نشد.' });
+            return res.status(404).json({ message: '❌ فایل bee_data.csv در پوشه backend/data یافت نشد.' });
         }
 
         const data = fs.readFileSync(filePath, 'utf8');
@@ -570,7 +575,11 @@ app.get('/api/setup/import-bee', async (req, res) => {
             if (cols.length >= 4) {
                 const title = cols[0]?.trim();
                 const subCategory = cols[1]?.trim();
-                const content = `بیماری: ${title}\nعلائم: ${cols[2]}\nدرمان: ${cols[3]}\nتوضیحات: ${cols[4] || ''}`;
+                const symptoms = cols[2]?.trim();
+                const treatment = cols[3]?.trim();
+                const extra = cols[4]?.trim() || '';
+
+                const content = `بیماری: ${title}\nعلائم: ${symptoms}\nدرمان: ${treatment}\nتوضیحات: ${extra}`;
                 
                 const exists = await KnowledgeBase.findOne({ title });
                 if (!exists) {
@@ -587,16 +596,17 @@ app.get('/api/setup/import-bee', async (req, res) => {
                 }
             }
         }
-        res.json({ message: `✅ ${count} رکورد جدید اضافه شد.`, status: 'success' });
+        res.json({ message: `✅ عملیات موفق! ${count} رکورد جدید به پایگاه دانش اضافه شد.`, status: 'success' });
 
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'خطا در ایمپورت: ' + error.message });
     }
 });
 
 
 // ------------------------------------------
-// 8️⃣ روت‌های ماژولار (ادمین و پروفایل)
+// 8️⃣ روت‌های ماژولار (Admin & User Profile)
 // ------------------------------------------
 app.use('/api/admin', adminRoutes);
 app.put('/api/users/profile', authenticateToken, userController.updateProfile);
