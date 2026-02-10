@@ -39,18 +39,7 @@ const AdminKnowledge = () => {
     }
   };
 
-  // حذف دانش
-  const handleDelete = async (id) => {
-    if (window.confirm('آیا از حذف این سند مطمئن هستید؟')) {
-      try {
-        await client.delete(`/admin/knowledge/${id}`);
-        toast.success('سند حذف شد');
-        fetchDocs();
-      } catch (error) {
-        toast.error('خطا در حذف');
-      }
-    }
-  };
+
 
   // ایمپورت فایل زنبور (ویژه)
   const handleImport = async () => {
