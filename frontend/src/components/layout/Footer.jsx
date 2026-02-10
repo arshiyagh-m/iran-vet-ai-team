@@ -24,13 +24,13 @@ const Footer = () => {
               اولین پلتفرم هوشمند دامپزشکی کشور که با استفاده از هوش مصنوعی پیشرفته، در تشخیص بیماری‌ها و مدیریت سلامت دام و طیور به شما کمک می‌کند.
             </p>
             <div className="flex gap-4">
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center hover:bg-pink-600 transition text-white">
+              <a href="https://www.instagram.com/iran_vet_ai?igsh=MXFsNjJ6b3Z1bnBp" target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center hover:bg-pink-600 transition text-white">
                 <FaInstagram size={20} />
               </a>
-              <a href="https://wa.me/989000000000" target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center hover:bg-green-500 transition text-white">
+              <a href="https://wa.me/989338656771" target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center hover:bg-green-500 transition text-white">
                 <FaWhatsapp size={20} />
               </a>
-              <a href="https://t.me" target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center hover:bg-blue-400 transition text-white">
+              <a href="https://t.me/iran_vet_ai" target="_blank" rel="noreferrer" className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center hover:bg-blue-400 transition text-white">
                 <FaTelegramPlane size={20} />
               </a>
             </div>
@@ -63,15 +63,15 @@ const Footer = () => {
             <ul className="space-y-4 text-slate-400 text-sm">
               <li className="flex items-start gap-3">
                 <FaMapMarkerAlt className="text-blue-500 mt-1" />
-                <span>ایران، تهران، پارک علم و فناوری</span>
+                <span>ایران، ارومیه، پارک علم و فناوری</span>
               </li>
               <li className="flex items-center gap-3">
                 <FaPhone className="text-blue-500" />
-                <span dir="ltr">+98 21 1234 5678</span>
+                <span dir="ltr">+98 933 865 6771</span>
               </li>
               <li className="flex items-center gap-3">
                 <FaEnvelope className="text-blue-500" />
-                <span>support@iranvetai.com</span>
+                <span>aiofficialaram@gmail.com</span>
               </li>
             </ul>
           </div>
