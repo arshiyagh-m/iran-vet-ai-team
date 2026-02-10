@@ -2,23 +2,25 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 
-// فراخوانی مدل‌ها (که در server.js تعریف شده‌اند)
+// 🔥 دریافت مدل‌ها از mongoose (چون در server.js تعریف شده‌اند)
 const User = mongoose.model('User');
 const ChatLog = mongoose.model('ChatLog');
 const Ticket = mongoose.model('Ticket');
 const Transaction = mongoose.model('Transaction');
-const KnowledgeBase = mongoose.model('KnowledgeBase');
+// اگر مدل KnowledgeBase استفاده نمی‌شود، نیازی به خط زیر نیست، اما بودنش ضرر ندارد
+const KnowledgeBase = mongoose.models.KnowledgeBase || mongoose.model('KnowledgeBase'); 
 
 // 🛡️ میدل‌ور محافظتی (فقط ادمین)
+// نکته: این تابع فرض می‌کند req.user قبلاً توسط authenticateToken پر شده است
 const protectAdmin = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
     } else {
-        res.status(403).json({ message: 'دسترسی غیرمجاز: فقط مدیران' });
+        res.status(403).json({ message: 'دسترسی غیرمجاز: شما مدیر نیستید.' });
     }
 };
 
-// اعمال محافظت روی تمام روت‌های پایین
+// اعمال محافظت روی تمام روت‌های این فایل
 router.use(protectAdmin);
 
 // ==========================================
@@ -30,7 +32,7 @@ router.get('/stats', async (req, res) => {
         const totalChats = await ChatLog.countDocuments();
         const fallbackChats = await ChatLog.countDocuments({ isFallbackResponse: true });
         
-        // محاسبه درآمد
+        // محاسبه درآمد کل
         const transactions = await Transaction.find();
         const totalRevenue = transactions.reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -41,44 +43,47 @@ router.get('/stats', async (req, res) => {
             fallbackRate: totalChats > 0 ? Math.round((fallbackChats / totalChats) * 100) : 0
         });
     } catch (error) {
-        res.status(500).json({ message: 'خطا در آمار' });
+        console.error(error);
+        res.status(500).json({ message: 'خطا در دریافت آمار' });
     }
 });
 
 // ==========================================
-// 2️⃣ چت‌ها (اصلاح شده برای مانیتورینگ) 🔥
+// 2️⃣ چت‌ها (مانیتورینگ)
 // ==========================================
-router.get('/chat-logs', async (req, res) => { // 👈 نام مسیر با فرانت‌اند یکی شد
+router.get('/chat-logs', async (req, res) => {
     try {
         const { filter } = req.query; 
 
         let query = {};
-        if (filter === 'fallback') query.isFallbackResponse = true; // فقط قرمزها
-        if (filter === 'database') query.isFallbackResponse = false; // فقط سبزها
+        if (filter === 'fallback') query.isFallbackResponse = true; // فقط پاسخ‌های هوش مصنوعی (قرمز)
+        if (filter === 'database') query.isFallbackResponse = false; // فقط پاسخ‌های دیتابیس (سبز)
 
         const logs = await ChatLog.find(query)
-            .populate('user', 'fullName email phone') // 👈 نام کاربر حیاتی است
-            .sort({ timestamp: -1 })
+            .populate('user', 'fullName email phone') // اطلاعات کاربر را بچسبان
+            .sort({ timestamp: -1 }) // جدیدترین‌ها اول
             .limit(100);
 
         res.json(logs);
     } catch (error) {
-        res.status(500).json({ message: 'خطا در دریافت چت‌ها' });
+        console.error(error);
+        res.status(500).json({ message: 'خطا در دریافت لاگ چت‌ها' });
     }
 });
 
 // ==========================================
-// 3️⃣ کاربران
+// 3️⃣ مدیریت کاربران
 // ==========================================
 router.get('/users', async (req, res) => {
     try {
         const users = await User.find().select('-password').sort({ createdAt: -1 });
         res.json(users);
     } catch (error) {
-        res.status(500).json({ message: 'خطا' });
+        res.status(500).json({ message: 'خطا در دریافت کاربران' });
     }
 });
 
+// تغییر وضعیت بن کاربر
 router.post('/users/ban', async (req, res) => {
     try {
         const { userId } = req.body;
@@ -89,12 +94,12 @@ router.post('/users/ban', async (req, res) => {
         await user.save();
         res.json({ message: `وضعیت کاربر تغییر کرد: ${user.role}` });
     } catch (error) {
-        res.status(500).json({ message: 'خطا' });
+        res.status(500).json({ message: 'خطا در تغییر وضعیت' });
     }
 });
 
-// شارژ توکن کاربر (اصلاح شده)
-router.post('/users/charge', async (req, res) => { // 👈 متد POST بهتر است
+// شارژ دستی توکن کاربر
+router.post('/users/charge', async (req, res) => {
     try {
         const { userId, tokens } = req.body;
         const user = await User.findById(userId);
@@ -103,23 +108,23 @@ router.post('/users/charge', async (req, res) => { // 👈 متد POST بهتر 
         user.tokens = (user.tokens || 0) + parseInt(tokens);
         await user.save();
         
-        // ثبت تراکنش دستی
+        // ثبت تراکنش صوری (جهت گزارش‌گیری)
         await Transaction.create({
             user: userId,
             admin: req.user._id,
-            amount: 0, // چون دستی شارژ شده
+            amount: 0, 
             tokens: parseInt(tokens),
             description: 'شارژ دستی توسط مدیریت'
         });
 
-        res.json({ message: 'شارژ انجام شد', newBalance: user.tokens });
+        res.json({ message: 'شارژ با موفقیت انجام شد', newBalance: user.tokens });
     } catch (error) {
-        res.status(500).json({ message: 'خطا در شارژ' });
+        res.status(500).json({ message: 'خطا در شارژ حساب' });
     }
 });
 
 // ==========================================
-// 4️⃣ تیکت‌ها
+// 4️⃣ مدیریت تیکت‌ها
 // ==========================================
 router.get('/tickets', async (req, res) => {
     try {
@@ -128,26 +133,26 @@ router.get('/tickets', async (req, res) => {
             .sort({ createdAt: -1 });
         res.json(tickets);
     } catch (error) {
-        res.status(500).json({ message: 'خطا' });
+        res.status(500).json({ message: 'خطا در دریافت تیکت‌ها' });
     }
 });
 
 router.post('/tickets/:id/reply', async (req, res) => {
     try {
         const ticket = await Ticket.findById(req.params.id);
-        if (!ticket) return res.status(404).json({ message: 'تیکت نیست' });
+        if (!ticket) return res.status(404).json({ message: 'تیکت یافت نشد' });
 
         ticket.messages.push({ sender: 'admin', text: req.body.text });
         ticket.status = 'answered';
         await ticket.save();
         res.json({ message: 'پاسخ ارسال شد' });
     } catch (error) {
-        res.status(500).json({ message: 'خطا' });
+        res.status(500).json({ message: 'خطا در ارسال پاسخ' });
     }
 });
 
 // ==========================================
-// 5️⃣ مالی
+// 5️⃣ گزارشات مالی
 // ==========================================
 router.get('/finance', async (req, res) => {
     try {
@@ -156,7 +161,7 @@ router.get('/finance', async (req, res) => {
             .sort({ date: -1 });
         res.json(transactions);
     } catch (error) {
-        res.status(500).json({ message: 'خطا' });
+        res.status(500).json({ message: 'خطا در دریافت تراکنش‌ها' });
     }
 });
 
