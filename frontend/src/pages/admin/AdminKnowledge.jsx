@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import client from '../../api/client';
 import { toast } from 'react-toastify';
-import { FaDatabase, FaTrash, FaFileCsv, FaPlusCircle, FaSearch } from 'react-icons/fa';
+import { FaDatabase, FaPlusCircle, FaSearch } from 'react-icons/fa'; // FaTrash هم حذف شد چون استفاده نمیشه
 
 const AdminKnowledge = () => {
-  const [form, setForm] = useState({ title: '', category: 'bee', subCategory: 'General', content: '' });
+  // استیت فرم
+  const [form, setForm] = useState({ title: '', category: 'bee', subCategory: '', content: '' });
   const [docs, setDocs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,11 +27,13 @@ const AdminKnowledge = () => {
   // ثبت دانش جدید
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.title || !form.content) return toast.error('عنوان و محتوا الزامی است');
+    
     setLoading(true);
     try {
       await client.post('/admin/knowledge', form);
       toast.success('دانش جدید با موفقیت اضافه شد! 🧠');
-      setForm({ ...form, title: '', content: '' }); // ریست کردن فرم
+      setForm({ title: '', category: 'bee', subCategory: '', content: '' }); // ریست کردن فرم
       fetchDocs(); // آپدیت لیست
     } catch (error) {
       toast.error('خطا در ثبت اطلاعات');
@@ -39,25 +42,10 @@ const AdminKnowledge = () => {
     }
   };
 
-
-
-  // ایمپورت فایل زنبور (ویژه)
-  const handleImport = async () => {
-    if (window.confirm('آیا فایل bee_data.csv را در پوشه backend/data قرار داده‌اید؟ این عملیات ممکن است کمی زمان ببرد.')) {
-      const toastId = toast.loading('در حال پردازش فایل...');
-      try {
-        const res = await client.get('/setup/import-bee');
-        toast.update(toastId, { render: res.data.message, type: 'success', isLoading: false, autoClose: 5000 });
-        fetchDocs();
-      } catch (error) {
-        toast.update(toastId, { render: 'خطا در ایمپورت فایل. لطفاً کنسول سرور را چک کنید.', type: 'error', isLoading: false, autoClose: 5000 });
-      }
-    }
-  };
-
-  // فیلتر کردن لیست
+  // فیلتر کردن لیست برای جستجو
   const filteredDocs = docs.filter(doc => 
-    doc.title.includes(searchTerm) || doc.content.includes(searchTerm)
+    doc.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    doc.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -98,6 +86,7 @@ const AdminKnowledge = () => {
                 <option value="horse">اسب 🐎</option>
                 <option value="poultry">طیور 🐓</option>
                 <option value="fish">آبزیان 🐟</option>
+                <option value="general">عمومی 🩺</option>
               </select>
             </div>
             <div>
@@ -136,7 +125,7 @@ const AdminKnowledge = () => {
         </form>
       </div>
 
-      {/* بخش ۲: لیست و مدیریت */}
+      {/* بخش ۲: لیست و جستجو */}
       <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 border-b pb-4">
           <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
@@ -144,52 +133,51 @@ const AdminKnowledge = () => {
             بانک اطلاعاتی موجود ({docs.length} سند)
           </h3>
           
-          <button 
-            onClick={handleImport}
-            className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition shadow-md"
-          >
-            <FaFileCsv className="text-green-400" />
-            ایمپورت سریع دیتابیس زنبور
-          </button>
-        </div>
-
-        {/* جستجو */}
-        <div className="relative mb-4">
-            <input 
-                type="text" 
-                placeholder="جستجو در اسناد..." 
-                className="w-full pl-4 pr-10 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-400 outline-none"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <FaSearch className="absolute right-3 top-3 text-gray-400" />
+          {/* بخش جستجو */}
+          <div className="relative w-full md:w-64">
+              <input 
+                  type="text" 
+                  placeholder="جستجو در اسناد..." 
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-400 outline-none transition"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+          </div>
         </div>
 
         {/* لیست اسناد */}
         <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
           {filteredDocs.length === 0 ? (
-            <p className="text-center text-gray-400 py-8">هیچ سندی پیدا نشد.</p>
+            <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                <p className="text-gray-400">هیچ سندی پیدا نشد.</p>
+            </div>
           ) : (
             filteredDocs.map((doc) => (
-              <div key={doc._id} className="group p-4 bg-gray-50 hover:bg-blue-50 rounded-xl border border-gray-100 transition flex justify-between items-start">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-gray-800">{doc.title}</span>
-                    <span className="text-[10px] px-2 py-0.5 bg-white border rounded text-gray-500">
-                      {doc.category}
-                    </span>
-                    {doc.subCategory && (
-                      <span className="text-[10px] px-2 py-0.5 bg-white border rounded text-gray-400">
-                        {doc.subCategory}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 line-clamp-1">{doc.content}</p>
+              <div key={doc._id} className="group p-4 bg-gray-50 hover:bg-blue-50 rounded-xl border border-gray-100 transition">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="font-bold text-gray-800 text-sm md:text-base">{doc.title}</span>
+                            
+                            {/* برچسب دسته‌بندی */}
+                            <span className={`text-[10px] px-2 py-0.5 rounded border font-bold
+                                ${doc.category === 'bee' ? 'bg-amber-100 text-amber-700 border-amber-200' : 
+                                  doc.category === 'dog' ? 'bg-orange-100 text-orange-700 border-orange-200' :
+                                  'bg-blue-100 text-blue-700 border-blue-200'}
+                            `}>
+                                {doc.category}
+                            </span>
+
+                            {doc.subCategory && (
+                                <span className="text-[10px] px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-gray-500">
+                                    {doc.subCategory}
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-500 line-clamp-2 leading-5">{doc.content}</p>
+                    </div>
                 </div>
-          
-                  
-                  <FaTrash />
-                </button>
               </div>
             ))
           )}
