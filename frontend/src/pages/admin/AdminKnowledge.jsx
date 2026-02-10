@@ -197,12 +197,14 @@ const AdminKnowledge = () => {
                   </div>
                   <p className="text-xs text-gray-500 line-clamp-1">{doc.content}</p>
                 </div>
-                
+          """      
                 <button 
                   onClick={() => handleDelete(doc._id)}
                   className="text-gray-300 hover:text-red-500 p-2 transition"
                   title="حذف سند"
                 >
+                  """
+                  
                   <FaTrash />
                 </button>
               </div>
