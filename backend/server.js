@@ -7,27 +7,28 @@ const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
 
-// --- تنظیمات اولیه سرور ---
+// ==========================================
+// ⚙️ تنظیمات اولیه سرور
+// ==========================================
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- میدل‌ورهای حیاتی ---
+// تنظیمات میدل‌ور (Middlewares)
 app.use(cors());
-app.use(express.json()); // برای خواندن داده‌های JSON
+app.use(express.json()); // قابلیت خواندن JSON در بادی درخواست‌ها
 
 // تنظیم OpenAI
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// --- اتصال به دیتابیس MongoDB ---
+// اتصال به دیتابیس MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('✅ Connected to MongoDB Successfully'))
   .catch(err => console.error('❌ MongoDB Connection Error:', err.message));
 
 
-// ============================================================
-// 📌 بخش اول: تعریف مدل‌ها (Database Models)
-// نکته: این‌ها باید قبل از روت‌ها تعریف شوند.
-// ============================================================
+// ==========================================
+// 🗄️ بخش اول: تعریف مدل‌های دیتابیس (Models)
+// ==========================================
 
 // 1. مدل کاربر (User)
 const userSchema = new mongoose.Schema({
@@ -35,15 +36,15 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   phone: { type: String, unique: true, required: true },
   password: { type: String, required: true },
-  role: { type: String, default: 'user' }, // admin, user, banned
-  tokens: { type: Number, default: 5 }, // اعتبار اولیه
+  role: { type: String, default: 'user' }, // مقادیر: admin, user, banned
+  tokens: { type: Number, default: 5 }, // اعتبار اولیه ۵ عدد
   jobType: { type: String, default: 'unknown' },
   mustChangePassword: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-// 2. مدل لایسنس (License)
+// 2. مدل لایسنس (License) - برای شارژ حساب با کد
 const licenseSchema = new mongoose.Schema({
   code: { type: String, required: true, unique: true },
   tokens: { type: Number, required: true },
@@ -52,40 +53,41 @@ const licenseSchema = new mongoose.Schema({
 });
 const License = mongoose.models.License || mongoose.model('License', licenseSchema);
 
-// 3. مدل پایگاه دانش (KnowledgeBase)
+// 3. مدل پایگاه دانش (KnowledgeBase) - مغز هوش مصنوعی
 const kbSchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
-  category: { type: String, required: true },
+  category: { type: String, required: true }, // bee, dog, cat, ...
   subCategory: { type: String, default: 'general' },
   tags: [String],
   sourceFile: { type: String, default: 'manual_entry' }, 
   topic: { type: String, default: 'general' }
-});
-// ایندکس متنی برای جستجوی هوشمند
+}, { timestamps: true });
+
+// ایندکس‌گذاری برای جستجوی سریع متنی
 kbSchema.index({ content: 'text', title: 'text', tags: 'text' });
 const KnowledgeBase = mongoose.models.KnowledgeBase || mongoose.model('KnowledgeBase', kbSchema);
 
-// 4. مدل نشست گفتگو (ChatSession)
+// 4. مدل نشست گفتگو (ChatSession) - لیست چت‌ها در سایدبار
 const sessionSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  botType: String, // مثلاً bee, dog
-  title: String,   // عنوان چت
+  botType: String, // نوع ربات
+  title: String,   // عنوان تولید شده برای چت
 }, { timestamps: true });
 const ChatSession = mongoose.models.ChatSession || mongoose.model('ChatSession', sessionSchema);
 
-// 5. مدل لاگ چت (ChatLog) - شامل فیدبک
+// 5. مدل پیام‌ها (ChatLog) - شامل سوال، جواب و فیدبک
 const chatLogSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   session: { type: mongoose.Schema.Types.ObjectId, ref: 'ChatSession' }, 
   botType: { type: String, default: 'General' },
   question: { type: String, required: true },
   answer: { type: String, required: true },
-  reference: { type: String, default: null },
+  reference: { type: String, default: null }, // منبع پاسخ
   licenseUsed: { type: String },
-  isFallbackResponse: { type: Boolean, default: false }, // true یعنی هوش مصنوعی از خودش گفته
+  isFallbackResponse: { type: Boolean, default: false }, // آیا هوش مصنوعی از خودش گفته؟
   
-  // فیلدهای فیدبک (لایک و دیس‌لایک)
+  // سیستم فیدبک (لایک و دیس‌لایک)
   feedback: { type: String, enum: ['like', 'dislike', null], default: null },
   feedbackReason: { type: String, default: null },
   feedbackComment: { type: String, default: null },
@@ -100,7 +102,7 @@ const ticketSchema = new mongoose.Schema({
   subject: String,
   status: { type: String, enum: ['open', 'pending', 'closed', 'answered'], default: 'open' },
   messages: [{
-    sender: String, // 'user' or 'admin'
+    sender: String, // 'user' یا 'admin'
     text: String,
     createdAt: { type: Date, default: Date.now }
   }]
@@ -129,17 +131,16 @@ const transactionSchema = new mongoose.Schema({
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
 
 
-// ============================================================
-// 📌 بخش دوم: میدل‌ورهای امنیتی (Middlewares)
-// ============================================================
+// ==========================================
+// 🛡️ بخش دوم: میدل‌ورهای امنیتی
+// ==========================================
 
-// ثابت‌ها
 const BOT_TITLES = {
     bee: "زنبور عسل", dog: "سگ‌ها", cat: "گربه‌ها", cow: "دام بزرگ",
     horse: "اسب", poultry: "طیور", fish: "آبزیان", general: "دامپزشکی عمومی"
 };
 
-// میدل‌ور احراز هویت (Token Check)
+// 1. میدل‌ور بررسی توکن (Authentication)
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // فرمت: Bearer TOKEN
@@ -165,7 +166,7 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// میدل‌ور ادمین (Admin Check)
+// 2. میدل‌ور بررسی ادمین (Admin Check)
 const isAdmin = (req, res, next) => {
     if (req.user && req.user.role === 'admin') {
         next();
@@ -175,27 +176,28 @@ const isAdmin = (req, res, next) => {
 };
 
 
-// ============================================================
-// 📌 بخش سوم: روت‌های عمومی (Public Routes)
-// ============================================================
+// ==========================================
+// 🌐 بخش سوم: روت‌های عمومی و احراز هویت
+// ==========================================
 
 // تست سلامت سرور
 app.get('/', (req, res) => {
     res.send('<h1>✅ Iran Vet AI Backend is Running!</h1>');
 });
 
-// ثبت نام
+// ثبت نام کاربر
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { fullName, email, phone, password } = req.body;
     
+    // بررسی تکراری بودن ایمیل
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: 'این ایمیل قبلاً ثبت شده است.' });
     
-    // ۵ توکن هدیه ثبت نام
+    // ایجاد کاربر جدید
     const newUser = await User.create({ fullName, email, phone, password, tokens: 5 });
     
-    // ایجاد نوتیفیکیشن خوش‌آمدگویی
+    // ارسال نوتیفیکیشن خوش‌آمدگویی
     await Notification.create({ 
         user: newUser._id, 
         title: 'خوش آمدید', 
@@ -209,7 +211,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// ورود
+// ورود کاربر
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -239,16 +241,16 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 
-// ============================================================
-// 📌 بخش چهارم: هوش مصنوعی و چت (AI Core)
-// ============================================================
+// ==========================================
+// 🤖 بخش چهارم: هوش مصنوعی و چت (RAG System)
+// ==========================================
 
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
     let { message, botType, licenseCode, sessionId } = req.body; 
     const user = req.user;
 
-    // 1. مدیریت سشن (New Chat vs History)
+    // 1. مدیریت نشست گفتگو (Session)
     let currentSession;
     if (sessionId) {
         currentSession = await ChatSession.findById(sessionId);
@@ -256,6 +258,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
             return res.status(404).json({ message: 'نشست گفتگو یافت نشد.' });
         }
     } else {
+        // ایجاد سشن جدید با عنوان خودکار
         const generatedTitle = message.split(' ').slice(0, 6).join(' ') + '...';
         currentSession = await ChatSession.create({
             user: user._id,
@@ -265,7 +268,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         sessionId = currentSession._id;
     }
 
-    // 2. پاسخ سریع به احوالپرسی
+    // 2. پاسخ سریع به احوالپرسی (برای صرفه‌جویی در هزینه)
     const greetings = ['سلام', 'درود', 'خسته نباشید', 'چطوری', 'خوبی', 'صبح بخیر', 'شب بخیر', 'hi', 'hello'];
     const isGreeting = greetings.some(g => message.trim().toLowerCase().startsWith(g)) && message.length < 30;
 
@@ -280,7 +283,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         });
     }
 
-    // 3. بررسی اعتبار (توکن یا لایسنس)
+    // 3. بررسی اعتبار (توکن کاربر یا لایسنس)
     let activeLicense = null;
     let useUserTokens = false;
 
@@ -296,7 +299,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         useUserTokens = true;
     }
 
-    // 4. دریافت تاریخچه گفتگو (برای حافظه)
+    // 4. دریافت تاریخچه گفتگو (برای حافظه کوتاه‌مدت)
     const historyLogs = await ChatLog.find({ session: sessionId })
         .sort({ timestamp: -1 })
         .limit(6);
@@ -306,7 +309,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         { role: "assistant", content: log.answer }
     ]);
 
-    // 5. استخراج کلمات کلیدی هوشمند (RAG Query)
+    // 5. استخراج کلمات کلیدی هوشمند (Query Expansion)
     const botTitle = BOT_TITLES[botType] || botType;
     const searchPrompt = `
         کاربر سوالی در مورد "${botTitle}" پرسیده است: "${message}"
@@ -322,41 +325,43 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
     const smartKeywords = keywordExtraction.choices[0].message.content.split(/\s+/);
 
-    // 6. جستجو در دیتابیس
+    // 6. جستجو در پایگاه دانش (RAG)
     let searchCondition = {
         category: botType,
         $or: [
-            { content: { $regex: message, $options: 'i' } },
-            ...smartKeywords.map(word => ({ content: { $regex: word, $options: 'i' } }))
+            { content: { $regex: message, $options: 'i' } }, // جستجوی عین جمله
+            ...smartKeywords.map(word => ({ content: { $regex: word, $options: 'i' } })) // جستجوی کلمات کلیدی
         ]
     };
 
     const relatedDocs = await KnowledgeBase.find(searchCondition).limit(4);
 
-    // 7. تولید پاسخ نهایی
+    // 7. تولید پاسخ نهایی توسط هوش مصنوعی
     let aiAnswer = "";
     let referenceText = "";
-    let shouldDeductToken = false; 
+    let shouldDeductToken = true; 
 
+    // اگر دیتابیس خالی بود ولی کاربر دارد ادامه بحث قبلی را می‌کند، نباید قطع کنیم
     const isFollowUp = historyMessages.length > 0 && relatedDocs.length === 0;
 
     if (relatedDocs.length === 0 && !isFollowUp) {
         aiAnswer = "متاسفانه اطلاعات دقیقی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را با جزئیات بیشتری توضیح دهید.";
         referenceText = "بدون منبع";
-        shouldDeductToken = false;
+        shouldDeductToken = false; // توکن کسر نمی‌شود
     } else {
-        shouldDeductToken = true;
-        
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         referenceText = relatedDocs.length > 0 ? relatedDocs.map(doc => doc.title).join(", ") : "حافظه گفتگو";
 
         const systemPrompt = `
             شما یک "دامپزشک متخصص" و هوشمند در زمینه "${botTitle}" هستید.
-            اطلاعات علمی (CONTEXT): ${contextData}
             
+            اطلاعات علمی (CONTEXT):
+            ${contextData}
+
             دستورالعمل:
             1. به ۵ پیام آخر (History) دسترسی داری.
             2. پاسخ باید کاملاً علمی، دلسوزانه و به زبان فارسی باشد.
+            3. فقط از CONTEXT و History استفاده کن.
         `;
 
         const response = await openai.chat.completions.create({
@@ -383,7 +388,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    // 9. ذخیره پیام
+    // 9. ذخیره پیام در دیتابیس
     const newLog = await ChatLog.create({
         user: user._id,
         session: sessionId,
@@ -400,7 +405,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
         sessionId: sessionId, 
         title: currentSession.title,
-        messageId: newLog._id 
+        messageId: newLog._id // برای ثبت فیدبک
     });
 
   } catch (error) {
@@ -416,7 +421,10 @@ app.post('/api/chat/:id/feedback', authenticateToken, async (req, res) => {
         const chatLog = await ChatLog.findById(req.params.id);
 
         if (!chatLog) return res.status(404).json({ message: 'پیام یافت نشد' });
-        if (chatLog.user.toString() !== req.user.id) return res.status(403).json({ message: 'غیرمجاز' });
+        
+        if (chatLog.user.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'غیرمجاز' });
+        }
 
         chatLog.feedback = feedback;
         chatLog.feedbackReason = reason;
@@ -430,37 +438,76 @@ app.post('/api/chat/:id/feedback', authenticateToken, async (req, res) => {
 });
 
 
-// ============================================================
-// 📌 بخش پنجم: روت‌های ادمین (Admin Routes)
-// ============================================================
+// ==========================================
+// 🛡️ بخش پنجم: روت‌های ادمین (Full Admin Panel)
+// ==========================================
 
-// آمار داشبورد
+// 1. آمار داشبورد (این بخش باعث کار نکردن پیشخوان شده بود)
 app.get('/api/admin/stats', authenticateToken, isAdmin, async (req, res) => {
     try {
+        // شمارش‌ها
         const totalUsers = await User.countDocuments();
         const totalChats = await ChatLog.countDocuments();
+        const pendingTickets = await Ticket.countDocuments({ status: 'open' });
         const fallbackChats = await ChatLog.countDocuments({ isFallbackResponse: true });
         
+        // محاسبه درآمد کل
         const transactions = await Transaction.find();
         const totalRevenue = transactions.reduce((acc, curr) => acc + curr.amount, 0);
 
-        // نمودار ۷ روز گذشته
+        // تولید داده برای نمودار ۷ روز گذشته
         const chartData = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
             d.setDate(d.getDate() - i);
             const dateStr = d.toISOString().split('T')[0];
-            const start = new Date(dateStr);
-            const end = new Date(new Date(dateStr).getTime() + 86400000);
-            const count = await User.countDocuments({ createdAt: { $gte: start, $lt: end } });
+            
+            const startOfDay = new Date(dateStr);
+            const endOfDay = new Date(new Date(dateStr).getTime() + 86400000);
+            
+            const count = await User.countDocuments({ 
+                createdAt: { $gte: startOfDay, $lt: endOfDay } 
+            });
             chartData.push({ date: dateStr, count });
         }
 
-        res.json({ users: totalUsers, chats: totalChats, revenue: totalRevenue, fallbackRate: totalChats > 0 ? Math.round((fallbackChats / totalChats) * 100) : 0, chartData });
-    } catch (error) { res.status(500).json({ message: 'خطا در آمار' }); }
+        res.json({ 
+            users: totalUsers, 
+            chats: totalChats, 
+            revenue: totalRevenue, 
+            pendingTickets: pendingTickets,
+            fallbackRate: totalChats > 0 ? Math.round((fallbackChats / totalChats) * 100) : 0, 
+            chartData: chartData // ارسال داده‌های نمودار
+        });
+    } catch (error) {
+        console.error("Admin Stats Error:", error);
+        res.status(500).json({ message: 'خطا در دریافت آمار' });
+    }
 });
 
-// مانیتورینگ چت‌ها
+// 2. مدیریت دیتابیس هوشمند (Knowledge Base CRUD)
+app.get('/api/admin/knowledge', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const docs = await KnowledgeBase.find().sort({ createdAt: -1 });
+        res.json(docs);
+    } catch (error) { res.status(500).json({ message: 'خطا در دریافت دیتابیس' }); }
+});
+
+app.post('/api/admin/knowledge', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        await KnowledgeBase.create(req.body);
+        res.json({ message: 'رکورد جدید اضافه شد' });
+    } catch (error) { res.status(500).json({ message: 'خطا در افزودن' }); }
+});
+
+app.delete('/api/admin/knowledge/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        await KnowledgeBase.findByIdAndDelete(req.params.id);
+        res.json({ message: 'رکورد حذف شد' });
+    } catch (error) { res.status(500).json({ message: 'خطا در حذف' }); }
+});
+
+// 3. مانیتورینگ چت‌ها (با فیلتر)
 app.get('/api/admin/chat-logs', authenticateToken, isAdmin, async (req, res) => {
     try {
         let query = {};
@@ -472,60 +519,69 @@ app.get('/api/admin/chat-logs', authenticateToken, isAdmin, async (req, res) => 
             .sort({ timestamp: -1 })
             .limit(100);
         res.json(logs);
-    } catch (error) { res.status(500).json({ message: 'خطا در لاگ‌ها' }); }
+    } catch (error) { res.status(500).json({ message: 'خطا در دریافت لاگ‌ها' }); }
 });
 
-// لیست کاربران
+// 4. مدیریت کاربران (لیست، بن، شارژ)
 app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
     const users = await User.find().select('-password').sort({ createdAt: -1 });
     res.json(users);
 });
 
-// بن کردن کاربر
 app.post('/api/admin/users/ban', authenticateToken, isAdmin, async (req, res) => {
-    const user = await User.findById(req.body.userId);
-    if (!user) return res.status(404).json({ message: 'کاربر نیست' });
-    user.role = user.role === 'banned' ? 'user' : 'banned';
-    await user.save();
-    res.json({ message: `وضعیت کاربر: ${user.role}` });
+    try {
+        const user = await User.findById(req.body.userId);
+        if (!user) return res.status(404).json({ message: 'کاربر نیست' });
+        
+        user.role = user.role === 'banned' ? 'user' : 'banned';
+        await user.save();
+        res.json({ message: `وضعیت کاربر تغییر کرد: ${user.role}` });
+    } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
 
-// شارژ دستی کاربر
 app.post('/api/admin/users/charge', authenticateToken, isAdmin, async (req, res) => {
-    const user = await User.findById(req.body.userId);
-    if (!user) return res.status(404).json({ message: 'کاربر نیست' });
-    user.tokens += parseInt(req.body.tokens);
-    await user.save();
-    await Transaction.create({ user: user._id, admin: req.user._id, amount: 0, tokens: parseInt(req.body.tokens), description: 'شارژ دستی' });
-    res.json({ message: 'شارژ شد', newBalance: user.tokens });
+    try {
+        const user = await User.findById(req.body.userId);
+        if (!user) return res.status(404).json({ message: 'کاربر نیست' });
+
+        user.tokens += parseInt(req.body.tokens);
+        await user.save();
+        
+        await Transaction.create({ 
+            user: user._id, 
+            admin: req.user._id, 
+            amount: 0, 
+            tokens: parseInt(req.body.tokens), 
+            description: 'شارژ دستی توسط مدیریت' 
+        });
+        res.json({ message: 'شارژ انجام شد' });
+    } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
 
-// تیکت‌های ادمین
+// 5. تیکت‌های پشتیبانی (Admin)
 app.get('/api/admin/tickets', authenticateToken, isAdmin, async (req, res) => {
     const tickets = await Ticket.find().populate('user', 'fullName email').sort({ createdAt: -1 });
     res.json(tickets);
 });
 
-// پاسخ به تیکت
 app.post('/api/admin/tickets/:id/reply', authenticateToken, isAdmin, async (req, res) => {
     const ticket = await Ticket.findById(req.params.id);
-    if (!ticket) return res.status(404).json({ message: 'تیکت نیست' });
     ticket.messages.push({ sender: 'admin', text: req.body.text });
-    ticket.status = 'answered';
+    ticket.status = 'answered'; 
     await ticket.save();
     res.json({ message: 'پاسخ ارسال شد' });
 });
 
-// تراکنش‌ها
+// 6. گزارشات مالی
 app.get('/api/admin/finance', authenticateToken, isAdmin, async (req, res) => {
     const trans = await Transaction.find().populate('user', 'fullName').sort({ date: -1 });
     res.json(trans);
 });
 
 
-// ============================================================
-// 📌 بخش ششم: روت‌های کاربر (User Routes)
-// ============================================================
+// ==========================================
+// 👤 بخش ششم: روت‌های کاربر (User Routes)
+// ==========================================
 
 // دریافت پروفایل
 app.get('/api/users/profile', authenticateToken, async (req, res) => {
@@ -537,19 +593,26 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
 app.put('/api/users/profile', authenticateToken, async (req, res) => {
     try {
         const user = await User.findById(req.user._id);
+        
         if (req.body.fullName) user.fullName = req.body.fullName;
         if (req.body.phone) user.phone = req.body.phone;
         if (req.body.email) user.email = req.body.email;
+        
         if (req.body.password && req.body.password.trim().length > 0) {
             user.password = req.body.password;
             user.mustChangePassword = false;
         }
+        
         await user.save();
-        res.json({ message: 'پروفایل آپدیت شد', user, token: req.headers.authorization.split(' ')[1] });
-    } catch (error) { res.status(500).json({ message: 'خطا در آپدیت' }); }
+        res.json({ 
+            message: 'پروفایل آپدیت شد', 
+            user, 
+            token: req.headers.authorization.split(' ')[1] 
+        });
+    } catch (error) { res.status(500).json({ message: 'خطا در آپدیت پروفایل' }); }
 });
 
-// لیست سشن‌ها
+// دریافت لیست سشن‌ها
 app.get('/api/chat/sessions', authenticateToken, async (req, res) => {
     const { botType } = req.query; 
     const filter = { user: req.user.id };
@@ -558,7 +621,7 @@ app.get('/api/chat/sessions', authenticateToken, async (req, res) => {
     res.json(sessions);
 });
 
-// پیام‌های یک سشن
+// دریافت پیام‌های یک سشن
 app.get('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
     const msgs = await ChatLog.find({ session: req.params.id, user: req.user.id }).sort({ timestamp: 1 });
     res.json(msgs);
@@ -571,11 +634,19 @@ app.delete('/api/chat/sessions/:id', authenticateToken, async (req, res) => {
     res.json({ message: 'حذف شد' });
 });
 
-// تیکت‌های کاربر
+// ثبت تیکت جدید توسط کاربر
 app.post('/api/tickets', authenticateToken, async (req, res) => {
-    await Ticket.create({ user: req.user.id, subject: req.body.subject, messages: [{ sender: 'user', text: req.body.message }] });
-    res.status(201).json({ message: 'تیکت ثبت شد' });
+    try {
+        await Ticket.create({ 
+            user: req.user.id, 
+            subject: req.body.subject, 
+            messages: [{ sender: 'user', text: req.body.message }] 
+        });
+        res.status(201).json({ message: 'تیکت ثبت شد' });
+    } catch (error) { res.status(500).json({ message: 'Error' }); }
 });
+
+// دریافت تیکت‌های کاربر
 app.get('/api/tickets', authenticateToken, async (req, res) => {
     const tickets = await Ticket.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.json(tickets);
@@ -604,10 +675,9 @@ app.put('/api/notifications/:id/read', authenticateToken, async (req, res) => {
 });
 
 
-// ============================================================
-// 📌 بخش هفتم: ابزارهای سیستمی (Import)
-// ============================================================
-
+// ==========================================
+// 📥 بخش هفتم: ایمپورت دیتابیس (Setup)
+// ==========================================
 app.get('/api/setup/import-bee', async (req, res) => {
     try {
         const filePath = path.join(__dirname, 'data', 'bee_data.csv');
@@ -622,11 +692,17 @@ app.get('/api/setup/import-bee', async (req, res) => {
             const cols = row.split(','); 
             if (cols.length >= 4) {
                 const title = cols[0]?.trim();
+                const subCategory = cols[1]?.trim();
                 const exists = await KnowledgeBase.findOne({ title });
                 if (!exists) {
                     await KnowledgeBase.create({
-                        title, category: 'bee', subCategory: cols[1]?.trim(), content: `بیماری: ${title}\nعلائم: ${cols[2]}\nدرمان: ${cols[3]}`,
-                        tags: ['bee', 'disease'], sourceFile: 'bee_data.csv', topic: cols[1]?.trim() || 'general'
+                        title, 
+                        category: 'bee', 
+                        subCategory: subCategory, 
+                        content: `بیماری: ${title}\nعلائم: ${cols[2]}\nدرمان: ${cols[3]}`,
+                        tags: ['bee', 'disease', subCategory], 
+                        sourceFile: 'bee_data.csv',
+                        topic: subCategory || 'general'
                     });
                     count++;
                 }
@@ -637,9 +713,9 @@ app.get('/api/setup/import-bee', async (req, res) => {
 });
 
 
-// ============================================================
+// ==========================================
 // 🚀 اجرای سرور
-// ============================================================
+// ==========================================
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📡 API is ready at http://localhost:${PORT}`);
