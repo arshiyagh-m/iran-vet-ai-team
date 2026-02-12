@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import client from '../../api/client';
 import { 
-  FaSearch, FaFilter, FaRobot, FaDatabase, FaExclamationTriangle, FaUser, FaCheckCircle 
+  FaSearch, FaFilter, FaRobot, FaExclamationTriangle, FaUser, FaCheckCircle, FaEye, FaThumbsUp, FaThumbsDown 
 } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
 const AdminChatLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all'); // all, fallback, database
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
 
   // دریافت اطلاعات از سرور
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        // مطمئن شوید آدرس API با روت‌های بک‌اند شما (adminRoutes) یکی باشد
         const res = await client.get('/admin/chat-logs'); 
         setLogs(res.data);
       } catch (error) {
@@ -23,7 +24,6 @@ const AdminChatLogs = () => {
         setLoading(false);
       }
     };
-
     fetchLogs();
   }, []);
 
@@ -54,9 +54,9 @@ const AdminChatLogs = () => {
         <div>
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <FaRobot className="text-blue-600" />
-            مانیتورینگ پاسخ‌های هوش مصنوعی
+            مانیتورینگ هوشمند چت‌ها
             </h2>
-            <p className="text-gray-400 text-xs mt-1">بررسی کنید ربات چه پاسخ‌هایی به کاربران می‌دهد</p>
+            <p className="text-gray-400 text-xs mt-1">بررسی پاسخ‌های ربات و منابع استفاده شده</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -80,8 +80,8 @@ const AdminChatLogs = () => {
               onChange={(e) => setFilterType(e.target.value)}
             >
               <option value="all">همه گفتگوها</option>
-              <option value="database">✅ معتبر (از دیتابیس)</option>
-              <option value="fallback">⚠️ نامعتبر (خارج از دیتابیس)</option>
+              <option value="database">✅ پاسخ از دیتابیس</option>
+              <option value="fallback">⚠️ پاسخ عمومی (AI)</option>
             </select>
             <FaFilter className="absolute right-3 top-3.5 text-gray-400" />
           </div>
@@ -103,28 +103,24 @@ const AdminChatLogs = () => {
               <thead className="bg-gray-50/50 text-gray-500 text-xs uppercase font-bold border-b border-gray-100">
                 <tr>
                   <th className="p-4 whitespace-nowrap">کاربر</th>
-                  <th className="p-4 whitespace-nowrap">نوع ربات</th>
-                  <th className="p-4 w-1/3 min-w-[200px]">سوال کاربر</th>
-                  <th className="p-4 w-1/3 min-w-[200px]">پاسخ سیستم</th>
-                  <th className="p-4 whitespace-nowrap text-center">وضعیت پاسخ</th>
-                  <th className="p-4 whitespace-nowrap text-left">زمان</th>
+                  <th className="p-4 w-1/4 min-w-[200px]">سوال و جواب</th>
+                  <th className="p-4 w-1/4 min-w-[150px]">منبع پاسخ (Reference)</th>
+                  <th className="p-4 text-center">فیدبک</th>
+                  <th className="p-4 text-center">وضعیت</th>
+                  <th className="p-4 text-center">عملیات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filteredLogs.map((log) => (
                   <tr 
                     key={log._id} 
-                    className={`transition hover:bg-opacity-80 ${
-                        log.isFallbackResponse 
-                            ? 'bg-red-50/70 hover:bg-red-100/50' // 🔴 استایل قرمز برای فال‌بک
-                            : 'bg-white hover:bg-gray-50' // ⚪️ استایل سفید برای عادی
-                    }`}
+                    className={`transition hover:bg-gray-50`}
                   >
                     
                     {/* کاربر */}
-                    <td className="p-4">
+                    <td className="p-4 align-top">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-500">
+                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
                           <FaUser size={12} />
                         </div>
                         <div className="flex flex-col">
@@ -132,62 +128,74 @@ const AdminChatLogs = () => {
                             {log.user?.fullName || 'کاربر حذف شده'}
                             </span>
                             <span className="text-[10px] text-gray-400">{log.user?.phone}</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* نوع ربات */}
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-lg text-xs font-bold border ${getBotBadgeStyle(log.botType)}`}>
-                        {log.botType}
-                      </span>
-                    </td>
-
-                    {/* سوال */}
-                    <td className="p-4 align-top">
-                      <p className="text-sm text-gray-800 line-clamp-2 leading-relaxed" title={log.question}>
-                        {log.question}
-                      </p>
-                    </td>
-
-                    {/* پاسخ */}
-                    <td className="p-4 align-top">
-                      <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed" title={log.answer}>
-                        {log.answer}
-                      </p>
-                    </td>
-
-                    {/* وضعیت (منبع) - بخش رنگی اصلی */}
-                    <td className="p-4 text-center">
-                      {log.isFallbackResponse ? (
-                        <div className="inline-flex flex-col items-center gap-1">
-                            <div className="flex items-center gap-1 text-red-700 bg-red-200/50 px-3 py-1 rounded-full text-xs font-bold border border-red-200">
-                                <FaExclamationTriangle />
-                                هوش مصنوعی
-                            </div>
-                            <span className="text-[10px] text-red-400">خارج از دیتابیس</span>
-                        </div>
-                      ) : (
-                        <div className="inline-flex flex-col items-center gap-1">
-                            <div className="flex items-center gap-1 text-green-700 bg-green-100 px-3 py-1 rounded-full text-xs font-bold border border-green-200">
-                                <FaCheckCircle />
-                                دیتابیس
-                            </div>
-                            <span className="text-[10px] text-gray-400 max-w-[100px] truncate" title={log.reference}>
-                                {log.reference || 'سند داخلی'}
+                            <span className={`mt-1 px-1.5 py-0.5 rounded text-[10px] border w-fit ${getBotBadgeStyle(log.botType)}`}>
+                                {log.botType}
                             </span>
                         </div>
-                      )}
+                      </div>
                     </td>
 
-                    {/* تاریخ */}
-                    <td className="p-4 text-left">
-                      <div className="text-xs font-medium text-gray-600">
+                    {/* سوال و جواب (خلاصه) */}
+                    <td className="p-4 align-top">
+                      <div className="space-y-2">
+                          <div className="bg-blue-50 p-2 rounded-lg text-xs text-blue-800 border border-blue-100 line-clamp-2" title={log.question}>
+                              <span className="font-bold">س: </span>{log.question}
+                          </div>
+                          <div className="bg-gray-50 p-2 rounded-lg text-xs text-gray-600 border border-gray-100 line-clamp-2" title={log.answer}>
+                              <span className="font-bold">ج: </span>{log.answer}
+                          </div>
+                      </div>
+                    </td>
+
+                    {/* منبع پاسخ (مهم) */}
+                    <td className="p-4 align-top">
+                        {log.isFallbackResponse ? (
+                            <div className="flex items-start gap-1 text-orange-600 text-xs font-bold bg-orange-50 p-2 rounded-lg border border-orange-100">
+                                <FaExclamationTriangle className="mt-0.5 shrink-0" />
+                                <div>
+                                    <p>دانش عمومی (AI)</p>
+                                    <p className="text-[10px] font-normal opacity-80 mt-1">بدون منبع داخلی</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-start gap-1 text-green-700 text-xs font-bold bg-green-50 p-2 rounded-lg border border-green-100">
+                                <FaCheckCircle className="mt-0.5 shrink-0" />
+                                <div>
+                                    <p>دیتابیس تخصصی</p>
+                                    <p className="text-[10px] font-normal text-gray-600 mt-1 line-clamp-2" title={log.reference}>
+                                        {log.reference || 'منبع نامشخص'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </td>
+
+                    {/* فیدبک کاربر */}
+                    <td className="p-4 text-center align-middle">
+                        {log.feedback === 'like' && <div className="inline-flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-bold"><FaThumbsUp /> مفید</div>}
+                        {log.feedback === 'dislike' && <div className="inline-flex items-center gap-1 text-red-500 bg-red-50 px-2 py-1 rounded-full text-xs font-bold"><FaThumbsDown /> نامفید</div>}
+                        {!log.feedback && <span className="text-gray-300 text-xs">-</span>}
+                    </td>
+
+                    {/* زمان */}
+                    <td className="p-4 text-center align-middle">
+                      <div className="text-xs font-medium text-gray-500">
                         {new Date(log.timestamp).toLocaleDateString('fa-IR')}
                       </div>
-                      <div className="text-[10px] text-gray-400 mt-1">
+                      <div className="text-[10px] text-gray-400">
                         {new Date(log.timestamp).toLocaleTimeString('fa-IR', {hour: '2-digit', minute:'2-digit'})}
                       </div>
+                    </td>
+
+                    {/* دکمه مشاهده */}
+                    <td className="p-4 text-center align-middle">
+                        <button 
+                            onClick={() => navigate(`/admin/chat-session/${log.session}`)}
+                            className="bg-blue-50 text-blue-600 hover:bg-blue-100 p-2 rounded-xl transition shadow-sm border border-blue-100 group"
+                            title="مشاهده کامل گفتگو"
+                        >
+                            <FaEye className="text-lg group-hover:scale-110 transition-transform" />
+                        </button>
                     </td>
 
                   </tr>
