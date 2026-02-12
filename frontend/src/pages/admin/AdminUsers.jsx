@@ -21,10 +21,13 @@ const AdminUsers = () => {
     const amount = prompt(`تعداد توکن برای اضافه کردن به ${currentName}:`, "10");
     if (amount && !isNaN(amount)) {
       try {
-        const res = await client.put('/admin/users/charge', { userId, tokens: amount });
+        // 🔥 تغییر مهم: استفاده از POST به جای PUT (مطابق با server.js)
+        const res = await client.post('/admin/users/charge', { userId, tokens: parseInt(amount) });
+        
         toast.success(res.data.message || `حساب ${currentName} شارژ شد ✅`);
-        fetchUsers();
+        fetchUsers(); // رفرش لیست برای دیدن موجودی جدید
       } catch (err) { 
+        console.error(err);
         toast.error(err.response?.data?.message || 'خطا در عملیات شارژ'); 
       }
     }
@@ -32,20 +35,21 @@ const AdminUsers = () => {
 
   // ۲. تغییر رمز عبور کاربر
   const handleResetPass = async (userId, currentName) => {
-    const newPass = prompt(`رمز عبور جدید برای ${currentName} را وارد کنید:`);
+    const newPass = prompt(`رمز عبور جدید برای ${currentName} را وارد کنید (حداقل ۴ رقم):`);
     if (newPass) {
+        if(newPass.length < 4) return toast.error('رمز عبور باید حداقل ۴ رقم باشد');
+        
         try {
-            const res = await client.post('/admin/users/reset-password', { userId, newPassword: newPass });
-            toast.success(res.data.message || 'رمز عبور تغییر کرد 🔑');
+            await client.post('/admin/users/reset-password', { userId, newPassword: newPass });
+            toast.success('رمز عبور با موفقیت تغییر کرد 🔑');
         } catch(err) { 
             toast.error(err.response?.data?.message || 'خطا در تغییر رمز'); 
         }
     }
   };
 
-  // ۳. مسدود کردن (بن) کاربر - اصلاح شده برای نمایش دقیق خطا
+  // ۳. مسدود کردن (بن) کاربر
   const handleBan = async (userId, currentRole) => {
-    // جلوگیری از ارسال درخواست بن برای ادمین در سمت فرانت
     if(currentRole === 'admin') {
         return toast.error('نمی‌توانید مدیر سیستم را مسدود کنید!');
     }
@@ -56,23 +60,16 @@ const AdminUsers = () => {
 
     if(window.confirm(confirmMsg)) {
         try {
-            // ارسال درخواست به سرور
             const res = await client.post('/admin/users/ban', { userId: userId });
-            
-            // نمایش پیام موفقیت از سمت سرور
             toast.success(res.data.message);
-            
-            // آپدیت لیست
             fetchUsers();
         } catch(err) { 
-            console.error("Ban Error:", err);
-            // نمایش خطای دقیق سرور (مثلاً: ادمین را نمی‌توان بن کرد)
-            toast.error(err.response?.data?.message || 'خطا در انجام عملیات مسدودسازی'); 
+            toast.error(err.response?.data?.message || 'خطا در انجام عملیات'); 
         }
     }
   };
 
-  // فیلتر جستجو (نام، موبایل، ایمیل)
+  // فیلتر جستجو
   const filteredUsers = users.filter(u => 
     (u.fullName || '').includes(search) || 
     (u.phone || '').includes(search) || 
@@ -106,8 +103,8 @@ const AdminUsers = () => {
             <tr>
               <th className="p-4">کاربر</th>
               <th className="p-4">اطلاعات تماس</th>
-              <th className="p-4">وضعیت</th>
-              <th className="p-4">موجودی</th>
+              <th className="p-4 text-center">وضعیت</th>
+              <th className="p-4 text-center">موجودی</th>
               <th className="p-4 text-center">عملیات مدیریتی</th>
             </tr>
           </thead>
@@ -118,17 +115,17 @@ const AdminUsers = () => {
                 filteredUsers.map(user => (
                   <tr key={user._id} className={`hover:bg-blue-50/30 transition ${user.role === 'banned' ? 'bg-red-50' : ''}`}>
                     
-                    {/* نام و نقش */}
+                    {/* نام */}
                     <td className="p-4">
                         <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${user.role === 'admin' ? 'bg-red-500' : 'bg-blue-500'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${user.role === 'admin' ? 'bg-indigo-600' : 'bg-blue-500'}`}>
                                 <FaUser />
                             </div>
                             <span className="font-bold text-gray-800">{user.fullName}</span>
                         </div>
                     </td>
 
-                    {/* ایمیل و موبایل */}
+                    {/* تماس */}
                     <td className="p-4">
                         <div className="flex flex-col">
                             <span className="font-mono text-gray-700">{user.phone}</span>
@@ -136,30 +133,32 @@ const AdminUsers = () => {
                         </div>
                     </td>
 
-                    {/* نقش (Role) */}
-                    <td className="p-4">
-                        {user.role === 'admin' && <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold border border-red-200">مدیر سیستم</span>}
-                        {user.role === 'user' && <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs border border-blue-100">کاربر عادی</span>}
-                        {user.role === 'banned' && <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold shadow-sm">مسدود شده ⛔</span>}
+                    {/* نقش */}
+                    <td className="p-4 text-center">
+                        {user.role === 'admin' && <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs font-bold border border-indigo-200">مدیر کل</span>}
+                        {user.role === 'user' && <span className="bg-emerald-50 text-emerald-600 px-2 py-1 rounded text-xs border border-emerald-100">کاربر فعال</span>}
+                        {user.role === 'banned' && <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold shadow-sm">مسدود ⛔</span>}
                     </td>
 
                     {/* توکن */}
-                    <td className="p-4 font-bold text-green-600 text-base">{user.tokens}</td>
+                    <td className="p-4 text-center">
+                        <span className="font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
+                            {user.tokens}
+                        </span>
+                    </td>
 
                     {/* دکمه‌ها */}
                     <td className="p-4">
                       <div className="flex justify-center gap-2">
                         
-                        {/* دکمه شارژ */}
                         <button 
                             onClick={() => handleCharge(user._id, user.fullName)} 
-                            className="bg-yellow-400 hover:bg-yellow-500 text-white p-2 rounded-lg transition shadow-sm tooltip"
-                            title="شارژ توکن"
+                            className="bg-amber-400 hover:bg-amber-500 text-white p-2 rounded-lg transition shadow-sm"
+                            title="افزایش اعتبار"
                         >
                             <FaCoins />
                         </button>
 
-                        {/* دکمه تغییر رمز */}
                         <button 
                             onClick={() => handleResetPass(user._id, user.fullName)} 
                             className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-lg transition shadow-sm"
@@ -168,7 +167,6 @@ const AdminUsers = () => {
                             <FaKey />
                         </button>
 
-                        {/* دکمه بن کردن (فقط اگر ادمین نباشد) */}
                         {user.role !== 'admin' && (
                             <button 
                                 onClick={() => handleBan(user._id, user.role)} 
