@@ -27,7 +27,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 
 // ==========================================
-// 🗄️ بخش اول: تعریف مدل‌های دیتابیس (Models)
+// 🗄️ بخش اول: تعریف کامل مدل‌های دیتابیس
 // ==========================================
 
 // 1. مدل کاربر (User)
@@ -83,7 +83,7 @@ const chatLogSchema = new mongoose.Schema({
   botType: { type: String, default: 'General' },
   question: { type: String, required: true },
   answer: { type: String, required: true },
-  reference: { type: String, default: null }, // منبع پاسخ
+  reference: { type: String, default: null }, // منبع پاسخ (نام سند یا دانش عمومی)
   licenseUsed: { type: String },
   isFallbackResponse: { type: Boolean, default: false }, // آیا هوش مصنوعی از خودش گفته؟
   
@@ -190,7 +190,6 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { fullName, email, phone, password } = req.body;
     
-    // بررسی تکراری بودن ایمیل
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: 'این ایمیل قبلاً ثبت شده است.' });
     
@@ -258,7 +257,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
             return res.status(404).json({ message: 'نشست گفتگو یافت نشد.' });
         }
     } else {
-        // ایجاد سشن جدید با عنوان خودکار
+        // ایجاد سشن جدید با عنوان خودکار (۶ کلمه اول)
         const generatedTitle = message.split(' ').slice(0, 6).join(' ') + '...';
         currentSession = await ChatSession.create({
             user: user._id,
@@ -340,18 +339,38 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     let aiAnswer = "";
     let referenceText = "";
     let shouldDeductToken = true; 
+    let isFallback = false;
 
     // اگر دیتابیس خالی بود ولی کاربر دارد ادامه بحث قبلی را می‌کند، نباید قطع کنیم
     const isFollowUp = historyMessages.length > 0 && relatedDocs.length === 0;
 
     if (relatedDocs.length === 0 && !isFollowUp) {
-        aiAnswer = "متاسفانه اطلاعات دقیقی در پایگاه دانش تخصصی یافت نشد. لطفاً علائم را با جزئیات بیشتری توضیح دهید.";
-        referenceText = "بدون منبع";
-        shouldDeductToken = false; // توکن کسر نمی‌شود
+        // 🔥 حالت Fallback: دیتابیس خالی است و سوال جدید است
+        isFallback = true;
+        referenceText = "دانش عمومی (AI General Knowledge)";
+        
+        // درخواست از دانش عمومی مدل
+        const systemPrompt = `You are a vet expert. Answer the user about "${botTitle}" using your general knowledge in Persian.`;
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "system", content: systemPrompt }, ...historyMessages, { role: "user", content: message }],
+            temperature: 0.7 
+        });
+        
+        aiAnswer = response.choices[0].message.content;
+        
+        // اضافه کردن دیسکلیمر (هشدار)
+        aiAnswer += "\n\n⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و توسط متخصص ارشد تأیید نشده است. لطفاً برای اطمینان حتماً با دامپزشک مشورت کنید.";
+        
     } else {
-        const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
-        referenceText = relatedDocs.length > 0 ? relatedDocs.map(doc => doc.title).join(", ") : "حافظه گفتگو";
+        // 🟢 حالت دیتابیس: اطلاعات پیدا شد یا از حافظه است
+        isFallback = false;
+        
+        // ساخت رشته رفرنس برای نمایش در پنل ادمین
+        const titles = relatedDocs.map(doc => doc.title);
+        referenceText = titles.length > 0 ? titles.join(" | ") : "حافظه گفتگو";
 
+        const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
         const systemPrompt = `
             شما یک "دامپزشک متخصص" و هوشمند در زمینه "${botTitle}" هستید.
             
@@ -397,7 +416,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         answer: aiAnswer,
         reference: referenceText,
         licenseUsed: licenseCode || 'UserTokens',
-        isFallbackResponse: relatedDocs.length === 0 && !isFollowUp
+        isFallbackResponse: isFallback // برای قرمز/سبز شدن در پنل
     });
 
     res.json({ 
@@ -442,10 +461,9 @@ app.post('/api/chat/:id/feedback', authenticateToken, async (req, res) => {
 // 🛡️ بخش پنجم: روت‌های ادمین (Full Admin Panel)
 // ==========================================
 
-// 1. آمار داشبورد (این بخش باعث کار نکردن پیشخوان شده بود)
+// 1. آمار داشبورد (پیشخوان)
 app.get('/api/admin/stats', authenticateToken, isAdmin, async (req, res) => {
     try {
-        // شمارش‌ها
         const totalUsers = await User.countDocuments();
         const totalChats = await ChatLog.countDocuments();
         const pendingTickets = await Ticket.countDocuments({ status: 'open' });
@@ -477,7 +495,7 @@ app.get('/api/admin/stats', authenticateToken, isAdmin, async (req, res) => {
             revenue: totalRevenue, 
             pendingTickets: pendingTickets,
             fallbackRate: totalChats > 0 ? Math.round((fallbackChats / totalChats) * 100) : 0, 
-            chartData: chartData // ارسال داده‌های نمودار
+            chartData: chartData 
         });
     } catch (error) {
         console.error("Admin Stats Error:", error);
@@ -522,7 +540,17 @@ app.get('/api/admin/chat-logs', authenticateToken, isAdmin, async (req, res) => 
     } catch (error) { res.status(500).json({ message: 'خطا در دریافت لاگ‌ها' }); }
 });
 
-// 4. مدیریت کاربران (لیست، بن، شارژ)
+// 4. دریافت جزئیات کامل سشن (برای دکمه چشم)
+app.get('/api/admin/session-details/:sessionId', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const logs = await ChatLog.find({ session: req.params.sessionId })
+            .populate('user', 'fullName email')
+            .sort({ timestamp: 1 });
+        res.json(logs);
+    } catch (e) { res.status(500).json({ message: 'خطا' }); }
+});
+
+// 5. مدیریت کاربران (لیست، بن، شارژ)
 app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
     const users = await User.find().select('-password').sort({ createdAt: -1 });
     res.json(users);
@@ -558,7 +586,7 @@ app.post('/api/admin/users/charge', authenticateToken, isAdmin, async (req, res)
     } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
 
-// 5. تیکت‌های پشتیبانی (Admin)
+// 6. تیکت‌های پشتیبانی (Admin)
 app.get('/api/admin/tickets', authenticateToken, isAdmin, async (req, res) => {
     const tickets = await Ticket.find().populate('user', 'fullName email').sort({ createdAt: -1 });
     res.json(tickets);
@@ -572,7 +600,7 @@ app.post('/api/admin/tickets/:id/reply', authenticateToken, isAdmin, async (req,
     res.json({ message: 'پاسخ ارسال شد' });
 });
 
-// 6. گزارشات مالی
+// 7. گزارشات مالی
 app.get('/api/admin/finance', authenticateToken, isAdmin, async (req, res) => {
     const trans = await Transaction.find().populate('user', 'fullName').sort({ date: -1 });
     res.json(trans);
