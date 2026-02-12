@@ -458,7 +458,7 @@ app.post('/api/chat/:id/feedback', authenticateToken, async (req, res) => {
 
 
 // ==========================================
-// 🛡️ بخش پنجم: روت‌های ادمین (Full Admin Panel)
+// 🛡️ بخش پنجم: روت‌های ادمین (Full Admin Panel) - آپدیت نهایی
 // ==========================================
 
 // 1. آمار داشبورد (پیشخوان)
@@ -550,12 +550,13 @@ app.get('/api/admin/session-details/:sessionId', authenticateToken, isAdmin, asy
     } catch (e) { res.status(500).json({ message: 'خطا' }); }
 });
 
-// 5. مدیریت کاربران (لیست، بن، شارژ)
+// 5. مدیریت کاربران (لیست، بن، شارژ، تغییر رمز)
 app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
     const users = await User.find().select('-password').sort({ createdAt: -1 });
     res.json(users);
 });
 
+// بن کردن / فعال کردن کاربر
 app.post('/api/admin/users/ban', authenticateToken, isAdmin, async (req, res) => {
     try {
         const user = await User.findById(req.body.userId);
@@ -567,23 +568,52 @@ app.post('/api/admin/users/ban', authenticateToken, isAdmin, async (req, res) =>
     } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
 
+// شارژ دستی حساب کاربر
 app.post('/api/admin/users/charge', authenticateToken, isAdmin, async (req, res) => {
     try {
-        const user = await User.findById(req.body.userId);
+        const { userId, tokens } = req.body;
+        const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'کاربر نیست' });
 
-        user.tokens += parseInt(req.body.tokens);
+        const amountToAdd = parseInt(tokens);
+        if (isNaN(amountToAdd)) return res.status(400).json({ message: 'مقدار نامعتبر است' });
+
+        user.tokens += amountToAdd;
         await user.save();
         
         await Transaction.create({ 
             user: user._id, 
             admin: req.user._id, 
             amount: 0, 
-            tokens: parseInt(req.body.tokens), 
+            tokens: amountToAdd, 
             description: 'شارژ دستی توسط مدیریت' 
         });
-        res.json({ message: 'شارژ انجام شد' });
+        res.json({ message: 'شارژ انجام شد', newBalance: user.tokens });
     } catch (error) { res.status(500).json({ message: 'خطا' }); }
+});
+
+// ✅ روت جدید: تغییر رمز عبور کاربر توسط ادمین (قبلاً نبود)
+app.post('/api/admin/users/reset-password', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { userId, newPassword } = req.body;
+        
+        if (!newPassword || newPassword.length < 4) {
+            return res.status(400).json({ message: 'رمز عبور باید حداقل ۴ کاراکتر باشد' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ message: 'کاربر یافت نشد' });
+        
+        user.password = newPassword; 
+        // نکته: اگر از سیستم هشینگ (bcrypt) استفاده می‌کنید، اینجا باید رمز را هش کنید.
+        // فعلاً طبق کد فعلی شما به صورت ساده ذخیره می‌کنیم:
+        
+        await user.save();
+        res.json({ message: 'رمز عبور کاربر با موفقیت تغییر کرد.' });
+    } catch (error) { 
+        console.error(error);
+        res.status(500).json({ message: 'خطا در تغییر رمز عبور' }); 
+    }
 });
 
 // 6. تیکت‌های پشتیبانی (Admin)
