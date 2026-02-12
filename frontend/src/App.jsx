@@ -9,7 +9,7 @@ import Footer from './components/layout/Footer';
 import DashboardLayout from './components/layout/DashboardLayout';
 import AdminLayout from './components/layout/AdminLayout';
 
-// 👇👇 ایمپورت محافظ روت (خیلی مهم)
+// 👇 ایمپورت محافظ روت
 import AdminRoute from './components/routes/AdminRoute';
 
 // --- صفحات عمومی ---
@@ -36,6 +36,8 @@ import AdminKnowledge from './pages/admin/AdminKnowledge';
 import AdminChatLogs from './pages/admin/AdminChatLogs';
 import AdminTickets from './pages/admin/AdminTickets';
 import AdminFinance from './pages/admin/AdminFinance';
+// 👇👇 ایمپورت صفحه جدید مشاهده چت (Read-Only)
+import AdminSessionView from './pages/admin/AdminSessionView';
 
 const App = () => {
   const { pathname } = useLocation();
@@ -70,11 +72,8 @@ const App = () => {
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="change-password" element={<ChangePassword />} />
           
-          {/* 👇 تغییرات اینجاست: دو حالت برای چت */}
-          {/* حالت اول: چت جدید (مثلاً /dashboard/chat/bee) */}
+          {/* چت بات‌ها */}
           <Route path="chat/:type" element={<BotChat />} />
-          
-          {/* حالت دوم: ادامه چت قدیمی (مثلاً /dashboard/chat/bee/65a1b...) */}
           <Route path="chat/:type/:sessionId" element={<BotChat />} />
         </Route>
 
@@ -85,6 +84,10 @@ const App = () => {
               <Route path="users" element={<AdminUsers />} />
               <Route path="knowledge" element={<AdminKnowledge />} />
               <Route path="chats" element={<AdminChatLogs />} />
+              
+              {/* 👇👇 روت جدید برای مشاهده کامل چت (Read-Only) 👇👇 */}
+              <Route path="chat-session/:sessionId" element={<AdminSessionView />} />
+              
               <Route path="tickets" element={<AdminTickets />} />
               <Route path="finance" element={<AdminFinance />} />
             </Route>
