@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   FaPaperPlane, FaArrowRight, FaSpinner, FaRobot, 
   FaDog, FaCat, FaFeather, FaStethoscope, FaPaw, FaFish, FaForumbee, FaPlus, FaUserMd,
-  FaThumbsUp, FaThumbsDown, FaCheck, FaTimes
+  FaThumbsUp, FaThumbsDown, FaCheck, FaTimes, FaExclamationTriangle
 } from 'react-icons/fa';
 import client from '../../api/client';
 import { toast } from 'react-toastify';
 
-// ✅ تنظیمات تم و پیام‌های خوش‌آمدگویی (حرفه‌ای و تخصصی)
+// ==========================================
+// 🎨 تنظیمات کامل ربات‌ها (رنگ، آیکون، پیام)
+// ==========================================
 const botConfig = {
   general: {
     name: 'دامپزشک عمومی',
@@ -69,27 +71,31 @@ const botConfig = {
 const BotChat = () => {
   const { type, sessionId: urlSessionId } = useParams();
   const navigate = useNavigate();
+  
+  // Ref ها برای اسکرول و تغییر سایز تکست‌اریا
   const endRef = useRef(null);
   const textareaRef = useRef(null);
   
+  // State های اصلی چت
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState(null);
 
-  // --- استیت‌های سیستم فیدبک ---
+  // State های مربوط به مودال فیدبک
   const [feedbackModal, setFeedbackModal] = useState({ show: false, messageId: null, type: null });
   const [feedbackReason, setFeedbackReason] = useState('');
   const [feedbackComment, setFeedbackComment] = useState('');
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
+  // انتخاب ربات فعلی
   const currentBot = botConfig[type] || botConfig.default;
 
-  // دلایل پیش‌فرض برای انتخاب
+  // لیست دلایل فیدبک
   const likeReasons = ['پاسخ دقیق', 'مفید بود', 'لحن مناسب', 'سرعت خوب'];
   const dislikeReasons = ['اطلاعات غلط', 'پاسخ ناقص', 'نامرتبط', 'نفهمیدن منظور'];
 
-  // 1. لود اولیه
+  // 1️⃣ لود کردن تاریخچه یا شروع چت جدید
   useEffect(() => {
     if (urlSessionId) {
         loadSessionHistory(urlSessionId);
@@ -99,40 +105,46 @@ const BotChat = () => {
     }
   }, [urlSessionId, type]);
 
-  // اسکرول به پایین
+  // 2️⃣ اسکرول خودکار به پایین با هر پیام جدید
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  // تابع دریافت تاریخچه از سرور
   const loadSessionHistory = async (id) => {
       try {
           setLoading(true);
           const res = await client.get(`/chat/sessions/${id}`);
+          
+          // تبدیل فرمت سرور به فرمت نمایش چت
           const formattedMsgs = res.data.flatMap(log => [
               { role: 'user', content: log.question },
               { 
                   role: 'assistant', 
                   content: log.answer, 
                   _id: log._id, 
-                  feedback: log.feedback 
+                  feedback: log.feedback,
+                  isFallback: log.isFallbackResponse // مهم: دریافت فلگ فال‌بک
               }
           ]);
           setMessages(formattedMsgs);
           setCurrentSessionId(id);
       } catch (error) {
-          toast.error('خطا در بارگذاری تاریخچه');
+          toast.error('خطا در بارگذاری تاریخچه گفتگو');
           navigate(`/dashboard/chat/${type}`);
       } finally {
           setLoading(false);
       }
   };
 
+  // شروع چت جدید (پاک کردن صفحه)
   const handleNewChat = () => {
       navigate(`/dashboard/chat/${type}`);
       setCurrentSessionId(null);
       setMessages([{ role: 'assistant', content: currentBot.welcome }]);
   };
 
+  // تغییر سایز خودکار اینپوت
   const handleInputResize = (e) => {
     const target = e.target;
     target.style.height = 'auto'; 
@@ -140,6 +152,7 @@ const BotChat = () => {
     setInput(target.value);
   };
 
+  // ارسال با Enter
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -147,6 +160,7 @@ const BotChat = () => {
     }
   };
 
+  // تابع اصلی ارسال پیام
   const handleSend = async (e) => {
     e && e.preventDefault();
     if (!input.trim()) return;
@@ -155,6 +169,7 @@ const BotChat = () => {
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto'; 
     
+    // نمایش پیام کاربر (Optimistic UI)
     setMessages(prev => [...prev, { role: 'user', content: userText }]);
     setLoading(true);
 
@@ -165,19 +180,22 @@ const BotChat = () => {
         sessionId: currentSessionId
       });
 
-      // اضافه کردن پیام جدید + messageId برای فیدبک
+      // اضافه کردن پاسخ ربات به لیست
       setMessages(prev => [...prev, { 
           role: 'assistant', 
           content: res.data.response, 
           _id: res.data.messageId, 
-          feedback: null 
+          feedback: null,
+          isFallback: res.data.isFallback // وضعیت دیتابیس/عمومی
       }]);
 
+      // اگر سشن جدید بود، URL را آپدیت کن
       if (!currentSessionId && res.data.sessionId) {
           setCurrentSessionId(res.data.sessionId);
           window.history.replaceState(null, '', `/dashboard/chat/${type}/${res.data.sessionId}`);
       }
 
+      // آپدیت موجودی توکن در هدر
       if (res.data.remainingTokens !== undefined) {
         const currentUser = JSON.parse(localStorage.getItem('user'));
         if (currentUser) {
@@ -189,18 +207,19 @@ const BotChat = () => {
 
     } catch (error) {
       let errorMsg = 'خطا در ارتباط با سرور.';
-      if (error.response?.status === 403) errorMsg = 'اعتبار توکن شما تمام شده است. ⛔';
+      if (error.response?.status === 403) errorMsg = 'اعتبار توکن شما تمام شده است. لطفاً حساب خود را شارژ کنید. ⛔';
       setMessages(prev => [...prev, { role: 'assistant', content: errorMsg, isError: true }]);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- توابع فیدبک ---
+  // --- توابع سیستم فیدبک ---
+  
   const openFeedbackModal = (messageId, type) => {
       setFeedbackModal({ show: true, messageId, type });
-      setFeedbackReason('');
-      setFeedbackComment('');
+      setFeedbackReason(''); // ریست کردن دلیل قبلی
+      setFeedbackComment(''); // ریست کردن کامنت قبلی
   };
 
   const submitFeedback = async () => {
@@ -212,8 +231,9 @@ const BotChat = () => {
               reason: feedbackReason,
               comment: feedbackComment
           });
-          toast.success("نظر شما ثبت شد");
+          toast.success("بازخورد شما با موفقیت ثبت شد 🙏");
           
+          // آپدیت کردن استیت پیام‌ها برای تغییر رنگ دکمه لایک
           setMessages(prev => prev.map(msg => 
               msg._id === feedbackModal.messageId 
                   ? { ...msg, feedback: feedbackModal.type } 
@@ -221,7 +241,7 @@ const BotChat = () => {
           ));
           setFeedbackModal({ show: false, messageId: null, type: null });
       } catch (error) {
-          toast.error("خطا در ثبت نظر");
+          toast.error("خطا در ثبت بازخورد");
       } finally {
           setSubmittingFeedback(false);
       }
@@ -230,8 +250,8 @@ const BotChat = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] bg-white rounded-3xl overflow-hidden shadow-2xl border border-gray-100 relative">
       
-      {/* هدر چت */}
-      <div className={`${currentBot.themeColor} p-4 flex items-center justify-between text-white shadow-md z-10`}>
+      {/* 🟢 هدر چت */}
+      <div className={`${currentBot.themeColor} p-4 flex items-center justify-between text-white shadow-md z-10 transition-colors duration-500`}>
         <div className="flex items-center gap-3">
             <button onClick={() => navigate('/bots')} className="p-2 hover:bg-white/20 rounded-full transition">
               <FaArrowRight />
@@ -248,17 +268,18 @@ const BotChat = () => {
         </div>
         <button 
             onClick={handleNewChat}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg text-sm transition"
+            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg text-sm transition font-medium"
         >
             <FaPlus /> <span className="hidden sm:inline">چت جدید</span>
         </button>
       </div>
 
-      {/* ناحیه پیام‌ها */}
+      {/* 🟢 ناحیه نمایش پیام‌ها */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 scroll-smooth">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn group`}>
             
+            {/* آیکون ربات کنار پیام */}
             {msg.role === 'assistant' && (
                 <div className={`w-8 h-8 rounded-full ${currentBot.themeColor} text-white flex items-center justify-center text-sm ml-2 shrink-0 self-end mb-4 shadow-sm`}>
                     {currentBot.icon}
@@ -267,28 +288,35 @@ const BotChat = () => {
 
             <div className={`max-w-[85%] md:max-w-[75%] flex flex-col items-start`}>
                 <div className={`
-                    p-3.5 rounded-2xl text-sm leading-7 shadow-sm whitespace-pre-line
+                    p-3.5 rounded-2xl text-sm leading-7 shadow-sm whitespace-pre-line relative
                     ${msg.role === 'user' 
                         ? `${currentBot.themeColor} text-white rounded-br-none shadow-md` 
                         : 'bg-white text-gray-800 border border-gray-100 rounded-bl-none'}
                     ${msg.isError ? 'bg-red-50 text-red-600 border border-red-200' : ''}
                 `}>
                 {msg.content}
+
+                {/* ⚠️ آیکون هشدار برای پاسخ‌های خارج از دیتابیس */}
+                {msg.isFallback && (
+                    <div className="absolute -top-2 -right-2 text-amber-500 bg-white rounded-full p-1 shadow-sm border border-gray-100 tooltip-trigger" title="این پاسخ بر اساس دانش عمومی است و تایید دیتابیس ندارد">
+                        <FaExclamationTriangle size={12} />
+                    </div>
+                )}
                 </div>
 
-                {/* 👇 دکمه‌های لایک و دیس‌لایک */}
+                {/* 👍👎 دکمه‌های لایک و دیس‌لایک */}
                 {msg.role === 'assistant' && msg._id && (
                     <div className="flex gap-2 mt-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <button 
                             onClick={() => openFeedbackModal(msg._id, 'like')}
-                            className={`p-1 rounded-full transition ${msg.feedback === 'like' ? 'text-green-600 bg-green-50' : 'text-gray-300 hover:text-green-500 hover:bg-gray-100'}`}
+                            className={`p-1.5 rounded-full transition ${msg.feedback === 'like' ? 'text-green-600 bg-green-50' : 'text-gray-300 hover:text-green-500 hover:bg-gray-100'}`}
                             title="مفید بود"
                         >
                             <FaThumbsUp size={12} />
                         </button>
                         <button 
                             onClick={() => openFeedbackModal(msg._id, 'dislike')}
-                            className={`p-1 rounded-full transition ${msg.feedback === 'dislike' ? 'text-red-500 bg-red-50' : 'text-gray-300 hover:text-red-500 hover:bg-gray-100'}`}
+                            className={`p-1.5 rounded-full transition ${msg.feedback === 'dislike' ? 'text-red-500 bg-red-50' : 'text-gray-300 hover:text-red-500 hover:bg-gray-100'}`}
                             title="مفید نبود"
                         >
                             <FaThumbsDown size={12} />
@@ -299,20 +327,21 @@ const BotChat = () => {
           </div>
         ))}
         
+        {/* انیمیشن لودینگ */}
         {loading && (
           <div className="flex justify-start items-center gap-2 mt-2">
              <div className={`w-8 h-8 rounded-full ${currentBot.themeColor} text-white flex items-center justify-center text-sm ml-2 shrink-0 shadow-sm opacity-50`}>
                 {currentBot.icon}
              </div>
             <div className="bg-white px-4 py-3 rounded-2xl rounded-bl-none shadow-sm border border-gray-100 flex gap-2 items-center text-gray-500 text-xs">
-              <FaSpinner className="animate-spin" /> در حال تحلیل...
+              <FaSpinner className="animate-spin" /> در حال تحلیل و جستجو...
             </div>
           </div>
         )}
         <div ref={endRef} />
       </div>
 
-      {/* بخش ورودی مدرن */}
+      {/* 🟢 بخش ورودی متن */}
       <div className="p-4 bg-white border-t border-gray-100">
         <div className="relative flex items-end gap-2 bg-gray-50 rounded-3xl border border-gray-200 focus-within:border-gray-400 focus-within:bg-white focus-within:shadow-md transition-all duration-300 p-1">
           <textarea
@@ -323,7 +352,7 @@ const BotChat = () => {
             onKeyDown={handleKeyDown}
             placeholder="پیام خود را بنویسید..."
             disabled={loading}
-            className="w-full bg-transparent border-none outline-none text-gray-700 placeholder-gray-400 resize-none py-3 pr-4 pl-14 max-h-[200px] overflow-y-auto rounded-3xl"
+            className="w-full bg-transparent border-none outline-none text-gray-700 placeholder-gray-400 resize-none py-3 pr-4 pl-14 max-h-[200px] overflow-y-auto rounded-3xl text-sm leading-6"
             style={{ minHeight: '48px' }} 
           />
           <button 
@@ -341,20 +370,20 @@ const BotChat = () => {
         </div>
       </div>
 
-      {/* 🔥 مودال فیدبک 🔥 */}
+      {/* 🟢 مودال ثبت فیدبک */}
       {feedbackModal.show && (
         <div className="absolute inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm animate-fadeIn" onClick={() => setFeedbackModal({ ...feedbackModal, show: false })}>
             <div className="bg-white w-full sm:w-96 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-slideUp" onClick={(e) => e.stopPropagation()}>
                 
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2 text-lg">
                         {feedbackModal.type === 'like' ? <FaThumbsUp className="text-green-500"/> : <FaThumbsDown className="text-red-500"/>}
                         {feedbackModal.type === 'like' ? 'نقطه قوت پاسخ؟' : 'مشکل پاسخ چه بود؟'}
                     </h3>
-                    <button onClick={() => setFeedbackModal({ ...feedbackModal, show: false })} className="text-gray-400 hover:text-gray-600"><FaTimes /></button>
+                    <button onClick={() => setFeedbackModal({ ...feedbackModal, show: false })} className="text-gray-400 hover:text-gray-600 p-1"><FaTimes /></button>
                 </div>
 
-                {/* انتخاب دلیل */}
+                {/* دکمه‌های انتخاب دلیل */}
                 <div className="flex flex-wrap gap-2 mb-4">
                     {(feedbackModal.type === 'like' ? likeReasons : dislikeReasons).map(reason => (
                         <button
@@ -371,9 +400,9 @@ const BotChat = () => {
                     ))}
                 </div>
 
-                {/* کامنت متنی */}
+                {/* تکست‌اریا برای توضیحات */}
                 <textarea 
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:bg-white focus:border-blue-400 outline-none resize-none"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:bg-white focus:border-blue-400 outline-none resize-none transition"
                     rows={3}
                     placeholder="توضیحات تکمیلی برای ادمین..."
                     value={feedbackComment}
@@ -384,7 +413,7 @@ const BotChat = () => {
                 <button 
                     onClick={submitFeedback}
                     disabled={submittingFeedback}
-                    className={`w-full mt-4 py-3 rounded-xl text-white font-bold text-sm shadow-md transition transform active:scale-95 flex justify-center gap-2
+                    className={`w-full mt-4 py-3 rounded-xl text-white font-bold text-sm shadow-md transition transform active:scale-95 flex justify-center gap-2 items-center
                         ${feedbackModal.type === 'like' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-500 hover:bg-red-600'}
                     `}
                 >
