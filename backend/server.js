@@ -241,7 +241,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 // ==========================================
-// 🤖 بخش چهارم: هوش مصنوعی و چت (نسخه کامل و بدون حذفیات)
+// 🤖 بخش چهارم: هوش مصنوعی و چت (نسخه کامل، دقیق و ضد توهم)
 // ==========================================
 
 app.post('/api/chat', authenticateToken, async (req, res) => {
@@ -360,7 +360,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     const relatedDocs = await KnowledgeBase.find(searchCondition).limit(4);
 
     // ---------------------------------------------------------
-    // گام هفتم: تولید پاسخ نهایی (The Brain)
+    // گام هفتم: تولید پاسخ نهایی (The Brain - Strict Logic)
     // ---------------------------------------------------------
     let aiAnswer = "";
     let referenceText = "";
@@ -368,29 +368,21 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
     let shouldDeductToken = true;
 
     // بررسی اینکه آیا کاربر دارد در مورد موضوع قبلی صحبت می‌کند (Follow-up)
-    // اگر دیتابیس خالی بود ولی تاریخچه داشتیم، شاید سوال "بله" یا "توضیح بیشتر" باشد.
     const isFollowUp = historyMessages.length > 0 && relatedDocs.length === 0;
 
-    // لیست سایر ربات‌ها برای ارجاع کاربر در صورت اشتباه
-    const otherBotsList = Object.values(BOT_TITLES).join('، ');
-
     if (relatedDocs.length === 0 && !isFollowUp) {
-        // 🔴 حالت اول: دیتابیس خالی است و سوال جدید است (Fallback)
+        // 🔴 حالت اول: دیتابیس خالی است (Fallback به دانش عمومی)
         isFallback = true;
         referenceText = "دانش عمومی (AI General Knowledge)";
         
-        // سیستم پرامپت هوشمند برای تشخیص موضوع
         const systemPrompt = `
-            You are a highly specialized veterinary AI assistant for "${botTitle}".
+            You are a specialized assistant for "${botTitle}".
             
-            🚨 **CRITICAL INSTRUCTION (Specialist Guard):**
-            Check if the user's question is actually about "${botTitle}".
-            - IF the user asks about a different animal (e.g. asking about Dogs while you are a Bee bot):
-              REFUSE to answer medically. Say strictly in Persian: 
-              "من متخصص ${botTitle} هستم و در مورد سایر حیوانات نمی‌توانم نظر دهم. لطفاً از پنل کاربری، ربات مربوطه را انتخاب کنید."
+            🚨 **STRICT RULES:**
+            1. **SCOPE CHECK:** If the user asks about a different animal (e.g. asking a Bee bot about Dogs), REFUSE to answer. 
+               Say clearly in Persian: "من متخصص ${botTitle} هستم و در مورد سایر حیوانات نمی‌توانم نظر دهم. لطفاً ربات مربوطه را انتخاب کنید."
             
-            - IF the question IS about "${botTitle}" but you don't have specific context:
-              Answer using your general veterinary knowledge in Persian. Be helpful but cautious.
+            2. **GENERAL KNOWLEDGE:** If the question IS about "${botTitle}", answer using your general veterinary knowledge but be cautious.
         `;
 
         const response = await openai.chat.completions.create({
@@ -400,21 +392,21 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 ...historyMessages,
                 { role: "user", content: message }
             ],
-            temperature: 0.6 // کمی خلاقیت بیشتر برای پاسخ عمومی
+            temperature: 0.5 
         });
         
         aiAnswer = response.choices[0].message.content;
         
-        // اگر ربات جواب داد (یعنی ارجاع نداد به ربات دیگر)، متن سلب مسئولیت را اضافه کن
+        // اگر ربات جواب داد (یعنی ارجاع نداد به ربات دیگر)، هشدار اضافه کن
         if (!aiAnswer.includes("نمی‌توانم نظر دهم") && !aiAnswer.includes("ربات مربوطه")) {
-             aiAnswer += "\n\n⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و هنوز توسط متخصص ارشد تأیید نشده است. لطفاً برای اطمینان حتماً با دامپزشک مشورت کنید.";
+             aiAnswer += "\n\n⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و توسط دیتابیس تخصصی تأیید نشده است. لطفاً برای اطمینان با دامپزشک مشورت کنید.";
         } else {
-             // اگر ربات گفت "برو سراغ ربات دیگه"، توکن کم نکن (اختیاری - برای رضایت کاربر)
+             // اگر ارجاع داد، توکن کم نکن (اختیاری)
              shouldDeductToken = false;
         }
 
     } else {
-        // 🟢 حالت دوم: اطلاعات در دیتابیس پیدا شد (RAG Mode)
+        // 🟢 حالت دوم: اطلاعات در دیتابیس پیدا شد (RAG Strict Mode)
         isFallback = false;
         
         // ساخت رفرنس برای نمایش در پنل ادمین
@@ -423,17 +415,25 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
         const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
 
-        // سیستم پرامپت تخصصی با دیتابیس
+        // 🔥🔥🔥 پرامپت فوق سخت‌گیرانه برای جلوگیری از توهم 🔥🔥🔥
         const systemPrompt = `
-            You are a super-specialist veterinary consultant for "${botTitle}".
+            You are a super-specialist in "${botTitle}".
             
-            📚 **VALIDATED KNOWLEDGE BASE (CONTEXT):**
+            📚 **APPROVED KNOWLEDGE BASE (CONTEXT):**
             ${contextData}
 
-            🚨 **CRITICAL INSTRUCTION (Specialist Guard):**
-            1. First, ensure the question relates to "${botTitle}". If the user asks about a completely different animal, REFUSE and tell them to switch bots.
-            2. If related, use the CONTEXT and History to provide a precise, scientific, and compassionate answer in Persian.
-            3. If the CONTEXT contains a treatment, explain it clearly.
+            🚨 **CRITICAL INSTRUCTIONS (DO NOT IGNORE):**
+            1. **SCOPE CHECK:** If the user asks about a different animal (Mismatch with ${botTitle}), REFUSE and tell them to switch bots.
+            
+            2. **STRICT CONTEXT USE:** Answer the user's question **ONLY** using the information provided in the **CONTEXT** above.
+            
+            3. **NO HALLUCINATIONS:** - **DO NOT** use your internal training data to mention specific drug names, poisons, or chemical treatments (like Permethrin, Amitraz, etc.) unless they are EXPLICITLY written in the CONTEXT.
+               - If the text talks about "pest control" generally but doesn't name a poison, **DO NOT INVENT ONE**.
+            
+            4. **MISSING INFO:** If the user asks for a specific medicine/poison and it is NOT in the context, say explicitly: 
+               "در دیتابیس تخصصی فعلی، نام داروی خاصی برای این مورد ذکر نشده است. لطفاً با دامپزشک مشورت کنید."
+
+            5. Answer in Persian.
         `;
 
         const response = await openai.chat.completions.create({
@@ -443,7 +443,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 ...historyMessages,
                 { role: "user", content: message }
             ],
-            temperature: 0.3 // دمای پایین برای دقت بالا و عدم توهم
+            temperature: 0.2 // دمای پایین برای کاهش خلاقیت و جلوگیری از دروغ گفتن
         });
 
         aiAnswer = response.choices[0].message.content;
@@ -462,7 +462,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    // ذخیره پیام در دیتابیس (برای تاریخچه و مانیتورینگ)
+    // ذخیره پیام در دیتابیس
     const newLog = await ChatLog.create({
         user: user._id,
         session: sessionId,
