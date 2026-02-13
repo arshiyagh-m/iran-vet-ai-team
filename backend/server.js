@@ -241,23 +241,30 @@ app.post('/api/auth/login', async (req, res) => {
 
 
 // ==========================================
-// 🤖 بخش چهارم: هوش مصنوعی و چت (RAG System)
+// 🤖 بخش چهارم: هوش مصنوعی و چت (نسخه کامل و بدون حذفیات)
 // ==========================================
 
 app.post('/api/chat', authenticateToken, async (req, res) => {
   try {
+    // 1. دریافت ورودی‌ها
     let { message, botType, licenseCode, sessionId } = req.body; 
     const user = req.user;
 
-    // 1. مدیریت نشست گفتگو (Session)
+    // عنوان فارسی ربات برای پرامپت‌ها
+    const botTitle = BOT_TITLES[botType] || botType;
+
+    // ---------------------------------------------------------
+    // گام اول: مدیریت نشست گفتگو (Session Management)
+    // ---------------------------------------------------------
     let currentSession;
     if (sessionId) {
+        // اگر شناسه سشن ارسال شده، آن را پیدا و اعتبارسنجی کن
         currentSession = await ChatSession.findById(sessionId);
         if (!currentSession || currentSession.user.toString() !== user.id) {
-            return res.status(404).json({ message: 'نشست گفتگو یافت نشد.' });
+            return res.status(404).json({ message: 'نشست گفتگو یافت نشد یا شما دسترسی ندارید.' });
         }
     } else {
-        // ایجاد سشن جدید با عنوان خودکار (۶ کلمه اول)
+        // اگر سشن جدید است، عنوان هوشمند بساز (۶ کلمه اول پیام)
         const generatedTitle = message.split(' ').slice(0, 6).join(' ') + '...';
         currentSession = await ChatSession.create({
             user: user._id,
@@ -267,38 +274,46 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         sessionId = currentSession._id;
     }
 
-    // 2. پاسخ سریع به احوالپرسی (برای صرفه‌جویی در هزینه)
+    // ---------------------------------------------------------
+    // گام دوم: پاسخ سریع به احوالپرسی (بدون کسر توکن)
+    // ---------------------------------------------------------
     const greetings = ['سلام', 'درود', 'خسته نباشید', 'چطوری', 'خوبی', 'صبح بخیر', 'شب بخیر', 'hi', 'hello'];
     const isGreeting = greetings.some(g => message.trim().toLowerCase().startsWith(g)) && message.length < 30;
 
     if (isGreeting) {
-        const botName = BOT_TITLES[botType] || 'دامپزشکی';
         return res.json({ 
-            response: `سلام! من دستیار هوشمند ${botName} هستم. لطفاً مشکل یا سوال خود را بفرمایید.`, 
+            response: `سلام! من دستیار هوشمند و تخصصی در زمینه «${botTitle}» هستم. لطفاً مشکل یا سوال خود را بفرمایید تا بررسی کنم.`, 
             remainingTokens: user.tokens, 
-            isFallback: false,
             sessionId: currentSession._id, 
-            title: currentSession.title
+            title: currentSession.title,
+            isFallback: false
         });
     }
 
-    // 3. بررسی اعتبار (توکن کاربر یا لایسنس)
+    // ---------------------------------------------------------
+    // گام سوم: بررسی اعتبار (توکن یا لایسنس)
+    // ---------------------------------------------------------
     let activeLicense = null;
     let useUserTokens = false;
 
     if (licenseCode) {
+        // اولویت با لایسنس است
         activeLicense = await License.findOne({ code: licenseCode, isActive: true });
         if (!activeLicense || activeLicense.tokens < 1) {
-            return res.status(400).json({ message: 'لایسنس نامعتبر یا فاقد اعتبار است.' });
+            return res.status(400).json({ message: 'لایسنس وارد شده نامعتبر است یا اعتبار آن تمام شده.' });
         }
     } else {
+        // استفاده از توکن‌های حساب کاربری
         if (user.tokens < 1) {
-            return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است.' });
+            return res.status(403).json({ message: 'اعتبار توکن حساب شما تمام شده است. لطفاً حساب خود را شارژ کنید.' });
         }
         useUserTokens = true;
     }
 
-    // 4. دریافت تاریخچه گفتگو (برای حافظه کوتاه‌مدت)
+    // ---------------------------------------------------------
+    // گام چهارم: دریافت تاریخچه گفتگو (Memory)
+    // ---------------------------------------------------------
+    // ۶ پیام آخر این سشن را می‌گیریم تا ربات حافظه کوتاه مدت داشته باشد
     const historyLogs = await ChatLog.find({ session: sessionId })
         .sort({ timestamp: -1 })
         .limit(6);
@@ -308,79 +323,74 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         { role: "assistant", content: log.answer }
     ]);
 
-    // 5. استخراج کلمات کلیدی هوشمند (Query Expansion)
-    const botTitle = BOT_TITLES[botType] || botType;
+    // ---------------------------------------------------------
+    // گام پنجم: استخراج کلمات کلیدی (Query Expansion)
+    // ---------------------------------------------------------
+    // از هوش مصنوعی می‌خواهیم کلمات کلیدی تخصصی را بیرون بکشد تا سرچ دقیق‌تر شود
     const searchPrompt = `
-        کاربر سوالی در مورد "${botTitle}" پرسیده است: "${message}"
-        وظیفه تو: کلمات کلیدی، هم‌معنی‌های تخصصی و نام بیماری‌های مرتبط را استخراج کن.
-        فقط کلمات را با فاصله (Space) جدا کن.
+        Task: Extract specific veterinary keywords, synonyms, and disease names from the user query.
+        Context: The user is asking about "${botTitle}".
+        User Query: "${message}"
+        Output: Only space-separated keywords (Persian). No extra text.
     `;
 
     const keywordExtraction = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "system", content: "Keywords only." }, { role: "user", content: searchPrompt }],
+        model: "gpt-4o-mini", // مدل سریع و ارزان
+        messages: [
+            { role: "system", content: "You are a keyword extractor." }, 
+            { role: "user", content: searchPrompt }
+        ],
         temperature: 0.3,
     });
 
     const smartKeywords = keywordExtraction.choices[0].message.content.split(/\s+/);
 
-    // 6. جستجو در پایگاه دانش (RAG)
-    let searchCondition = {
-        category: botType,
+    // ---------------------------------------------------------
+    // گام ششم: جستجو در پایگاه دانش (RAG Search)
+    // ---------------------------------------------------------
+    const searchCondition = {
+        category: botType, // فقط در دسته بندی همین ربات بگرد
         $or: [
             { content: { $regex: message, $options: 'i' } }, // جستجوی عین جمله
             ...smartKeywords.map(word => ({ content: { $regex: word, $options: 'i' } })) // جستجوی کلمات کلیدی
         ]
     };
 
+    // دریافت ۴ سند مرتبط
     const relatedDocs = await KnowledgeBase.find(searchCondition).limit(4);
 
-    // 7. تولید پاسخ نهایی توسط هوش مصنوعی
+    // ---------------------------------------------------------
+    // گام هفتم: تولید پاسخ نهایی (The Brain)
+    // ---------------------------------------------------------
     let aiAnswer = "";
     let referenceText = "";
-    let shouldDeductToken = true; 
     let isFallback = false;
+    let shouldDeductToken = true;
 
-    // اگر دیتابیس خالی بود ولی کاربر دارد ادامه بحث قبلی را می‌کند، نباید قطع کنیم
+    // بررسی اینکه آیا کاربر دارد در مورد موضوع قبلی صحبت می‌کند (Follow-up)
+    // اگر دیتابیس خالی بود ولی تاریخچه داشتیم، شاید سوال "بله" یا "توضیح بیشتر" باشد.
     const isFollowUp = historyMessages.length > 0 && relatedDocs.length === 0;
 
+    // لیست سایر ربات‌ها برای ارجاع کاربر در صورت اشتباه
+    const otherBotsList = Object.values(BOT_TITLES).join('، ');
+
     if (relatedDocs.length === 0 && !isFollowUp) {
-        // 🔥 حالت Fallback: دیتابیس خالی است و سوال جدید است
+        // 🔴 حالت اول: دیتابیس خالی است و سوال جدید است (Fallback)
         isFallback = true;
         referenceText = "دانش عمومی (AI General Knowledge)";
         
-        // درخواست از دانش عمومی مدل
-        const systemPrompt = `You are a vet expert. Answer the user about "${botTitle}" using your general knowledge in Persian.`;
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "system", content: systemPrompt }, ...historyMessages, { role: "user", content: message }],
-            temperature: 0.7 
-        });
-        
-        aiAnswer = response.choices[0].message.content;
-        
-        // اضافه کردن دیسکلیمر (هشدار)
-        aiAnswer += "\n\n⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و توسط متخصص ارشد تأیید نشده است. لطفاً برای اطمینان حتماً با دامپزشک مشورت کنید.";
-        
-    } else {
-        // 🟢 حالت دیتابیس: اطلاعات پیدا شد یا از حافظه است
-        isFallback = false;
-        
-        // ساخت رشته رفرنس برای نمایش در پنل ادمین
-        const titles = relatedDocs.map(doc => doc.title);
-        referenceText = titles.length > 0 ? titles.join(" | ") : "حافظه گفتگو";
-
-        const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
+        // سیستم پرامپت هوشمند برای تشخیص موضوع
         const systemPrompt = `
-            شما یک "دامپزشک متخصص" و هوشمند در زمینه "${botTitle}" هستید.
+            You are a highly specialized veterinary AI assistant for "${botTitle}".
             
-            اطلاعات علمی (CONTEXT):
-            ${contextData}
-
-            دستورالعمل:
-            1. به ۵ پیام آخر (History) دسترسی داری.
-            2. پاسخ باید کاملاً علمی، دلسوزانه و به زبان فارسی باشد.
-            3. فقط از CONTEXT و History استفاده کن.
+            🚨 **CRITICAL INSTRUCTION (Specialist Guard):**
+            Check if the user's question is actually about "${botTitle}".
+            - IF the user asks about a different animal (e.g. asking about Dogs while you are a Bee bot):
+              REFUSE to answer medically. Say strictly in Persian: 
+              "من متخصص ${botTitle} هستم و در مورد سایر حیوانات نمی‌توانم نظر دهم. لطفاً از پنل کاربری، ربات مربوطه را انتخاب کنید."
+            
+            - IF the question IS about "${botTitle}" but you don't have specific context:
+              Answer using your general veterinary knowledge in Persian. Be helpful but cautious.
         `;
 
         const response = await openai.chat.completions.create({
@@ -390,13 +400,58 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
                 ...historyMessages,
                 { role: "user", content: message }
             ],
-            temperature: 0.4, 
+            temperature: 0.6 // کمی خلاقیت بیشتر برای پاسخ عمومی
+        });
+        
+        aiAnswer = response.choices[0].message.content;
+        
+        // اگر ربات جواب داد (یعنی ارجاع نداد به ربات دیگر)، متن سلب مسئولیت را اضافه کن
+        if (!aiAnswer.includes("نمی‌توانم نظر دهم") && !aiAnswer.includes("ربات مربوطه")) {
+             aiAnswer += "\n\n⚠️ **توجه:** این پاسخ بر اساس دانش عمومی هوش مصنوعی است و هنوز توسط متخصص ارشد تأیید نشده است. لطفاً برای اطمینان حتماً با دامپزشک مشورت کنید.";
+        } else {
+             // اگر ربات گفت "برو سراغ ربات دیگه"، توکن کم نکن (اختیاری - برای رضایت کاربر)
+             shouldDeductToken = false;
+        }
+
+    } else {
+        // 🟢 حالت دوم: اطلاعات در دیتابیس پیدا شد (RAG Mode)
+        isFallback = false;
+        
+        // ساخت رفرنس برای نمایش در پنل ادمین
+        const titles = relatedDocs.map(doc => doc.title);
+        referenceText = titles.length > 0 ? titles.join(" | ") : "حافظه گفتگو";
+
+        const contextData = relatedDocs.map(doc => doc.content).join("\n---\n");
+
+        // سیستم پرامپت تخصصی با دیتابیس
+        const systemPrompt = `
+            You are a super-specialist veterinary consultant for "${botTitle}".
+            
+            📚 **VALIDATED KNOWLEDGE BASE (CONTEXT):**
+            ${contextData}
+
+            🚨 **CRITICAL INSTRUCTION (Specialist Guard):**
+            1. First, ensure the question relates to "${botTitle}". If the user asks about a completely different animal, REFUSE and tell them to switch bots.
+            2. If related, use the CONTEXT and History to provide a precise, scientific, and compassionate answer in Persian.
+            3. If the CONTEXT contains a treatment, explain it clearly.
+        `;
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+                { role: "system", content: systemPrompt },
+                ...historyMessages,
+                { role: "user", content: message }
+            ],
+            temperature: 0.3 // دمای پایین برای دقت بالا و عدم توهم
         });
 
         aiAnswer = response.choices[0].message.content;
     }
 
-    // 8. کسر اعتبار
+    // ---------------------------------------------------------
+    // گام هشتم: کسر اعتبار و ذخیره‌سازی
+    // ---------------------------------------------------------
     if (shouldDeductToken) {
         if (useUserTokens) {
             user.tokens -= 1;
@@ -407,7 +462,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         }
     }
 
-    // 9. ذخیره پیام در دیتابیس
+    // ذخیره پیام در دیتابیس (برای تاریخچه و مانیتورینگ)
     const newLog = await ChatLog.create({
         user: user._id,
         session: sessionId,
@@ -416,45 +471,27 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
         answer: aiAnswer,
         reference: referenceText,
         licenseUsed: licenseCode || 'UserTokens',
-        isFallbackResponse: isFallback // برای قرمز/سبز شدن در پنل
+        isFallbackResponse: isFallback // برای نمایش وضعیت قرمز/سبز در پنل ادمین
     });
 
+    // ---------------------------------------------------------
+    // گام نهم: ارسال پاسخ به کلاینت
+    // ---------------------------------------------------------
     res.json({ 
         response: aiAnswer, 
         remainingTokens: useUserTokens ? user.tokens : (activeLicense ? activeLicense.tokens : 0),
         sessionId: sessionId, 
         title: currentSession.title,
-        messageId: newLog._id // برای ثبت فیدبک
+        messageId: newLog._id, // شناسه پیام برای ثبت لایک/دیس‌لایک
+        isFallback: isFallback // برای نمایش آیکون هشدار در فرانت
     });
 
   } catch (error) {
-    console.error("AI Error:", error);
-    res.status(500).json({ message: 'خطا در پردازش هوش مصنوعی' });
+    console.error("AI Processing Error:", error);
+    res.status(500).json({ message: 'خطا در پردازش هوش مصنوعی. لطفاً لحظاتی دیگر تلاش کنید.' });
   }
 });
 
-// ثبت بازخورد (لایک/دیس‌لایک)
-app.post('/api/chat/:id/feedback', authenticateToken, async (req, res) => {
-    try {
-        const { feedback, reason, comment } = req.body;
-        const chatLog = await ChatLog.findById(req.params.id);
-
-        if (!chatLog) return res.status(404).json({ message: 'پیام یافت نشد' });
-        
-        if (chatLog.user.toString() !== req.user.id) {
-            return res.status(403).json({ message: 'غیرمجاز' });
-        }
-
-        chatLog.feedback = feedback;
-        chatLog.feedbackReason = reason;
-        chatLog.feedbackComment = comment;
-        await chatLog.save();
-
-        res.json({ message: 'بازخورد ثبت شد.' });
-    } catch (error) {
-        res.status(500).json({ message: 'خطا در ثبت بازخورد' });
-    }
-});
 
 
 // ==========================================
