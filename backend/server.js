@@ -495,7 +495,7 @@ app.post('/api/chat', authenticateToken, async (req, res) => {
 
 
 // ==========================================
-// 🛡️ بخش پنجم: روت‌های ادمین (Full Admin Panel) - آپدیت نهایی
+// 🛡️ بخش پنجم: روت‌های ادمین (Full Admin Panel)
 // ==========================================
 
 // 1. آمار داشبورد (پیشخوان)
@@ -618,18 +618,19 @@ app.post('/api/admin/users/charge', authenticateToken, isAdmin, async (req, res)
         user.tokens += amountToAdd;
         await user.save();
         
+        // ثبت تراکنش با مبلغ ۰ (برای تکمیل بعدی توسط ادمین در بخش مالی)
         await Transaction.create({ 
             user: user._id, 
             admin: req.user._id, 
             amount: 0, 
             tokens: amountToAdd, 
-            description: 'شارژ دستی توسط مدیریت' 
+            description: 'شارژ دستی (نیاز به تکمیل اطلاعات)' 
         });
         res.json({ message: 'شارژ انجام شد', newBalance: user.tokens });
     } catch (error) { res.status(500).json({ message: 'خطا' }); }
 });
 
-// ✅ روت جدید: تغییر رمز عبور کاربر توسط ادمین (قبلاً نبود)
+// تغییر رمز عبور کاربر توسط ادمین
 app.post('/api/admin/users/reset-password', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { userId, newPassword } = req.body;
@@ -642,9 +643,6 @@ app.post('/api/admin/users/reset-password', authenticateToken, isAdmin, async (r
         if (!user) return res.status(404).json({ message: 'کاربر یافت نشد' });
         
         user.password = newPassword; 
-        // نکته: اگر از سیستم هشینگ (bcrypt) استفاده می‌کنید، اینجا باید رمز را هش کنید.
-        // فعلاً طبق کد فعلی شما به صورت ساده ذخیره می‌کنیم:
-        
         await user.save();
         res.json({ message: 'رمز عبور کاربر با موفقیت تغییر کرد.' });
     } catch (error) { 
@@ -667,10 +665,33 @@ app.post('/api/admin/tickets/:id/reply', authenticateToken, isAdmin, async (req,
     res.json({ message: 'پاسخ ارسال شد' });
 });
 
-// 7. گزارشات مالی
+// 7. مدیریت مالی و تراکنش‌ها
 app.get('/api/admin/finance', authenticateToken, isAdmin, async (req, res) => {
-    const trans = await Transaction.find().populate('user', 'fullName').sort({ date: -1 });
-    res.json(trans);
+    try {
+        const trans = await Transaction.find()
+            .populate('user', 'fullName email')
+            .populate('admin', 'fullName')
+            .sort({ date: -1 });
+        res.json(trans);
+    } catch (error) { res.status(500).json({ message: 'خطا در دریافت تراکنش‌ها' }); }
+});
+
+// ✅ روت جدید: ویرایش و تکمیل اطلاعات مالی تراکنش (برای تکمیل تراکنش‌های دستی)
+app.put('/api/admin/finance/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { amount, description } = req.body;
+        
+        // آپدیت کردن تراکنش با مبلغ واقعی و توضیحات فیش
+        await Transaction.findByIdAndUpdate(req.params.id, { 
+            amount: parseInt(amount), 
+            description: description 
+        });
+        
+        res.json({ message: 'اطلاعات تراکنش با موفقیت بروزرسانی شد ✅' });
+    } catch (error) { 
+        console.error("Finance Update Error:", error);
+        res.status(500).json({ message: 'خطا در ویرایش تراکنش' }); 
+    }
 });
 
 
