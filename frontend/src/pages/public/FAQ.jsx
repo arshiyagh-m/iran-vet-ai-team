@@ -23,11 +23,11 @@ const FAQ = () => {
           </p>
           <p>همین الان با اورژانس دامپزشکی یا نزدیک‌ترین کلینیک تماس بگیرید:</p>
           <a 
-            href="tel:09123456789" 
+            href="tel:09335836545" 
             className="flex items-center justify-center gap-2 bg-red-600 text-white py-3 px-4 rounded-xl font-bold hover:bg-red-700 transition shadow-md w-full sm:w-fit mx-auto"
           >
             <FaPhoneAlt className="animate-pulse" />
-            تماس فوری با اورژانس (09123456789)
+            تماس فوری با اورژانس (09338536545)
           </a>
         </div>
       )
@@ -59,7 +59,7 @@ const FAQ = () => {
           <p>تیم پشتیبانی ما ۲۴ ساعته در کنار شماست. اگر مشکلی در پرداخت دارید یا سوالی دارید، از روش‌های زیر استفاده کنید:</p>
           <div className="flex flex-wrap gap-3">
             <a 
-              href="https://wa.me/989123456789" 
+              href="https://wa.me/989338656771" 
               target="_blank" 
               rel="noreferrer"
               className="flex items-center gap-2 bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition shadow-sm"
@@ -72,7 +72,7 @@ const FAQ = () => {
               className="flex items-center gap-2 bg-slate-800 text-white py-2 px-4 rounded-lg hover:bg-slate-900 transition shadow-sm"
             >
               <FaPhoneAlt />
-              تماس با دفتر (021-12345678)
+              تماس با دفتر (------)
             </a>
           </div>
         </div>
