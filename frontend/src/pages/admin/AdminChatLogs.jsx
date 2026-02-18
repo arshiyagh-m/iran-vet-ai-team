@@ -8,8 +8,12 @@ import { useNavigate } from 'react-router-dom';
 const AdminChatLogs = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // استیت‌های مربوط به فیلترها
   const [filterType, setFilterType] = useState('all'); // all, fallback, database
+  const [botFilter, setBotFilter] = useState('all'); // all, bee, dog, cat, etc.
   const [searchTerm, setSearchTerm] = useState('');
+  
   const navigate = useNavigate();
 
   // دریافت اطلاعات از سرور
@@ -27,64 +31,92 @@ const AdminChatLogs = () => {
     fetchLogs();
   }, []);
 
-  // لاجیک فیلتر و جستجو
+  // لاجیک فیلتر ترکیبی (جستجو + نوع پاسخ + نوع ربات)
   const filteredLogs = logs.filter(log => {
     const term = searchTerm.toLowerCase();
     
-    // جستجو در نام کاربر، سوال و جواب
+    // ۱. بررسی جستجوی متنی
     const matchesSearch = 
       (log.question && log.question.toLowerCase().includes(term)) || 
       (log.answer && log.answer.toLowerCase().includes(term)) ||
       (log.user?.fullName && log.user.fullName.toLowerCase().includes(term));
     
-    // فیلتر بر اساس نوع پاسخ
-    if (filterType === 'all') return matchesSearch;
-    if (filterType === 'fallback') return matchesSearch && log.isFallbackResponse; // 🔴 فقط قرمزها (هوش مصنوعی)
-    if (filterType === 'database') return matchesSearch && !log.isFallbackResponse; // 🟢 فقط سبزها (دیتابیس)
+    // ۲. بررسی فیلتر وضعیت پاسخ (دیتابیس یا دانش عمومی)
+    let matchesType = true;
+    if (filterType === 'fallback') matchesType = log.isFallbackResponse === true;
+    if (filterType === 'database') matchesType = log.isFallbackResponse === false;
     
-    return matchesSearch;
+    // ۳. بررسی فیلتر نوع ربات
+    let matchesBot = true;
+    if (botFilter !== 'all') matchesBot = log.botType === botFilter;
+    
+    // نمایش لاگ فقط در صورتی که هر سه شرط برقرار باشد
+    return matchesSearch && matchesType && matchesBot;
   });
 
   return (
     <div className="space-y-6 animate-fadeIn">
       
       {/* --- هدر و کنترل‌ها --- */}
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col lg:flex-row justify-between items-center gap-4">
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-4">
         
-        <div>
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+        <div className="w-full xl:w-auto text-center xl:text-right">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center justify-center xl:justify-start gap-2">
             <FaRobot className="text-blue-600" />
             مانیتورینگ هوشمند چت‌ها
             </h2>
             <p className="text-gray-400 text-xs mt-1">بررسی پاسخ‌های ربات و منابع استفاده شده</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-          {/* باکس جستجو */}
-          <div className="relative">
+        {/* بخش فیلترها */}
+        <div className="flex flex-col sm:flex-row flex-wrap justify-center xl:justify-end gap-3 w-full xl:w-auto">
+          
+          {/* ۱. باکس جستجو */}
+          <div className="relative flex-grow sm:flex-grow-0">
             <input 
               type="text" 
-              placeholder="جستجو در سوال، جواب یا کاربر..." 
-              className="pl-4 pr-10 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 outline-none w-full sm:w-72 transition text-sm"
+              placeholder="جستجو در سوال، جواب..." 
+              className="pl-4 pr-10 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 outline-none w-full sm:w-60 transition text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <FaSearch className="absolute right-3 top-3.5 text-gray-400" />
           </div>
 
-          {/* فیلتر وضعیت */}
-          <div className="relative">
+          {/* ۲. فیلتر انتخاب ربات */}
+          <div className="relative flex-grow sm:flex-grow-0">
             <select 
-              className="pl-4 pr-10 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 outline-none appearance-none w-full sm:w-52 cursor-pointer text-sm font-medium"
+              className="pl-4 pr-10 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 outline-none appearance-none w-full sm:w-44 cursor-pointer text-sm font-medium"
+              value={botFilter}
+              onChange={(e) => setBotFilter(e.target.value)}
+            >
+              <option value="all">همه ربات‌ها</option>
+              <option value="general">دامپزشک عمومی</option>
+              <option value="bee">زنبور عسل</option>
+              <option value="dog">سگ‌ها</option>
+              <option value="cat">گربه‌ها</option>
+              <option value="cow">دام بزرگ</option>
+              <option value="horse">اسب</option>
+              <option value="poultry">طیور صنعتی</option>
+              <option value="fish">آبزیان</option>
+            </select>
+            <FaRobot className="absolute right-3 top-3.5 text-gray-400" />
+          </div>
+
+          {/* ۳. فیلتر وضعیت پاسخ */}
+          <div className="relative flex-grow sm:flex-grow-0">
+            <select 
+              className="pl-4 pr-10 py-2.5 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 outline-none appearance-none w-full sm:w-48 cursor-pointer text-sm font-medium"
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
-              <option value="all">همه گفتگوها</option>
+              <option value="all">همه وضعیت‌ها</option>
               <option value="database">✅ پاسخ از دیتابیس</option>
               <option value="fallback">⚠️ پاسخ عمومی (AI)</option>
             </select>
             <FaFilter className="absolute right-3 top-3.5 text-gray-400" />
           </div>
+
         </div>
       </div>
 
@@ -129,7 +161,7 @@ const AdminChatLogs = () => {
                             </span>
                             <span className="text-[10px] text-gray-400">{log.user?.phone}</span>
                             <span className={`mt-1 px-1.5 py-0.5 rounded text-[10px] border w-fit ${getBotBadgeStyle(log.botType)}`}>
-                                {log.botType}
+                                {translateBotType(log.botType)}
                             </span>
                         </div>
                       </div>
@@ -215,8 +247,28 @@ const getBotBadgeStyle = (type) => {
         case 'bee': return 'bg-amber-100 text-amber-700 border-amber-200';
         case 'dog': return 'bg-orange-100 text-orange-700 border-orange-200';
         case 'cat': return 'bg-blue-100 text-blue-700 border-blue-200';
+        case 'cow': return 'bg-green-100 text-green-700 border-green-200';
+        case 'horse': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        case 'poultry': return 'bg-red-100 text-red-700 border-red-200';
+        case 'fish': return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+        case 'general': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
         default: return 'bg-gray-100 text-gray-600 border-gray-200';
     }
-}
+};
+
+// تابع کمکی برای ترجمه نام ربات‌ها در جدول
+const translateBotType = (type) => {
+    const types = {
+        'bee': 'زنبور عسل',
+        'dog': 'سگ‌ها',
+        'cat': 'گربه‌ها',
+        'cow': 'دام بزرگ',
+        'horse': 'اسب',
+        'poultry': 'طیور',
+        'fish': 'آبزیان',
+        'general': 'عمومی'
+    };
+    return types[type] || type;
+};
 
 export default AdminChatLogs;
