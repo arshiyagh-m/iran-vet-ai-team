@@ -114,13 +114,18 @@ const DashboardLayout = () => {
         {/* لیست لینک‌ها */}
         <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto custom-scrollbar">
           
-          {/* 🔥 دکمه هوشمند ادمین (اینجا اضافه شد) 🔥 */}
-          {{(user.role === 'admin' || user.role === 'moderator') && (
-    <Link
-      to={user.role === 'admin' ? "/admin" : "/admin/chats"} // ناظر مستقیم بره به چت‌ها
-              className="flex items-center gap-3 px-4 py-3.5 mb-4 rounded-xl bg-gradient-to-r from-red-600 to-pink-600 text-white shadow-lg shadow-red-500/30 hover:shadow-red-500/50 hover:scale-105 transition-all duration-300 font-bold border border-red-400/50">
+          {/* 🔥 دکمه هوشمند ادمین و ناظر (اصلاح شد) 🔥 */}
+          {(user.role === 'admin' || user.role === 'moderator') && (
+            <Link
+              to={user.role === 'admin' ? "/admin" : "/admin/chats"}
+              className={`flex items-center gap-3 px-4 py-3.5 mb-4 rounded-xl text-white shadow-lg transition-all duration-300 font-bold border 
+                ${user.role === 'admin' 
+                  ? 'bg-gradient-to-r from-red-600 to-pink-600 shadow-red-500/30 hover:shadow-red-500/50 border-red-400/50' 
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 shadow-blue-500/30 hover:shadow-blue-500/50 border-blue-400/50'
+                } hover:scale-105`}
+            >
               <FaUserShield className="text-xl animate-pulse" />
-              <span>پنل مدیریت</span>
+              <span>{user.role === 'admin' ? 'پنل مدیریت' : 'پنل نظارت'}</span>
             </Link>
           )}
 
