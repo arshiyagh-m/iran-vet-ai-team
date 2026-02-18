@@ -13,7 +13,6 @@ const AdminRoute = () => {
   const parsedData = JSON.parse(storedData);
 
   // 3. استخراج نقش (Role) - بخش حیاتی اصلاح شده 🔥
-  // این خط هم ساختار { role: 'admin' } را می‌فهمد و هم { user: { role: 'admin' } }
   const role = parsedData.role || (parsedData.user && parsedData.user.role);
 
   // 4. لاگ برای دیباگ (حتماً کنسول مرورگر را چک کنید)
@@ -22,13 +21,13 @@ const AdminRoute = () => {
     detectedRole: role 
   });
 
-  // 5. بررسی نقش
-  if (role !== 'admin') {
-    // اگر نقش ادمین نیست، دسترسی ندارید
+  // 5. بررسی نقش (🔥 اینجا اصلاح شد تا ناظر هم وارد شود)
+  if (role !== 'admin' && role !== 'moderator') {
+    // اگر نقش کاربر نه ادمین است و نه ناظر، دسترسی ندارد
     return <Navigate to="/dashboard" replace />;
   }
 
-  // 6. دسترسی مجاز
+  // 6. دسترسی مجاز (عبور برای ادمین و ناظر آزاد است)
   return <Outlet />;
 };
 
