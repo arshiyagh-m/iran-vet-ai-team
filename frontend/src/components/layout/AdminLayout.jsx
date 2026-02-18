@@ -1,15 +1,24 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
   FaTachometerAlt, FaUsers, FaDatabase, FaSignOutAlt, 
-  FaHome, FaRobot, FaTicketAlt 
+  FaHome, FaRobot, FaTicketAlt, FaMoneyBillWave 
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { FaMoneyBillWave } from 'react-icons/fa';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [userRole, setUserRole] = useState(null);
+
+  // دریافت اطلاعات کاربر در هنگام لود شدن صفحه
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUserRole(parsedUser.role);
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -27,49 +36,59 @@ const AdminLayout = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 font-sans dir-rtl">
+    <div className="flex min-h-screen bg-gray-100 font-sans dir-rtl animate-fadeIn">
       
       {/* سایدبار ادمین */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-2xl fixed h-full z-50">
         <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+          <div className={`w-3 h-3 rounded-full animate-pulse ${userRole === 'admin' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
           <div>
             <h2 className="text-lg font-bold text-white">پنل مدیریت</h2>
-            <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-widest">Admin Access</p>
+            <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-widest">
+              {userRole === 'admin' ? 'Admin Access' : 'Moderator Access'}
+            </p>
           </div>
         </div>
         
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           
-          <Link to="/admin" className={getLinkClass('/admin')}>
-            <FaTachometerAlt /> پیشخوان
-          </Link>
-          
-          <Link to="/admin/users" className={getLinkClass('/admin/users')}>
-            <FaUsers /> کاربران و مالی
-          </Link>
-          
-          <Link to="/admin/knowledge" className={getLinkClass('/admin/knowledge')}>
-            <FaDatabase /> دیتابیس هوشمند
-          </Link>
+          {/* 🔴 این منوها را فقط ادمین اصلی (admin) می‌بیند */}
+          {userRole === 'admin' && (
+            <>
+              <Link to="/admin" className={getLinkClass('/admin')}>
+                <FaTachometerAlt /> پیشخوان
+              </Link>
+              
+              <Link to="/admin/users" className={getLinkClass('/admin/users')}>
+                <FaUsers /> مدیریت کاربران
+              </Link>
 
-          {/* 👇 لینک‌های جدید اضافه شد */}
-          <Link to="/admin/chats" className={getLinkClass('/admin/chats')}>
-            <FaRobot /> مانیتورینگ چت
-          </Link>
-          
-          <Link to="/admin/tickets" className={getLinkClass('/admin/tickets')}>
-            <FaTicketAlt /> پشتیبانی (تیکت)
-          </Link>
+              <Link to="/admin/finance" className={getLinkClass('/admin/finance')}>
+               <FaMoneyBillWave /> امور مالی
+              </Link>
+              
+              <Link to="/admin/knowledge" className={getLinkClass('/admin/knowledge')}>
+                <FaDatabase /> دیتابیس هوشمند
+              </Link>
+
+              <Link to="/admin/tickets" className={getLinkClass('/admin/tickets')}>
+                <FaTicketAlt /> پشتیبانی (تیکت)
+              </Link>
+            </>
+          )}
+
+          {/* 🔵 این منو را هم مدیر (admin) و هم ناظر (moderator) می‌بینند */}
+          {(userRole === 'admin' || userRole === 'moderator') && (
+            <Link to="/admin/chats" className={getLinkClass('/admin/chats')}>
+              <FaRobot /> مانیتورینگ چت
+            </Link>
+          )}
 
           <div className="border-t border-slate-800 my-4 pt-4"></div>
 
+          {/* دکمه‌های عمومی که همه می‌بینند */}
           <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 transition text-yellow-500 border border-slate-700/50">
             <FaHome /> بازگشت به سایت
-          </Link>
-
-          <Link to="/admin/finance" className={getLinkClass('/admin/finance')}>
-           <FaMoneyBillWave /> امور مالی
           </Link>
           
         </nav>
