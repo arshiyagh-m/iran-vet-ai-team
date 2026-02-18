@@ -174,7 +174,14 @@ const isAdmin = (req, res, next) => {
         res.status(403).json({ message: 'دسترسی غیرمجاز: فقط مدیران' });
     }
 };
-
+// 👇 این کد را جدید اضافه کنید: میدل‌ور دسترسی برای مدیر و ناظر چت
+const isModeratorOrAdmin = (req, res, next) => {
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'moderator')) {
+        next();
+    } else {
+        res.status(403).json({ message: 'شما به این بخش دسترسی ندارید' });
+    }
+};
 
 // ==========================================
 // 🌐 بخش سوم: روت‌های عمومی و احراز هویت
@@ -578,7 +585,7 @@ app.get('/api/admin/chat-logs', authenticateToken, isAdmin, async (req, res) => 
 });
 
 // 4. دریافت جزئیات کامل سشن (برای دکمه چشم)
-app.get('/api/admin/session-details/:sessionId', authenticateToken, isAdmin, async (req, res) => {
+app.get('/api/admin/session-details/:sessionId', authenticateToken, isModeratorOrAdmin, async (req, res) => {
     try {
         const logs = await ChatLog.find({ session: req.params.sessionId })
             .populate('user', 'fullName email')
@@ -594,7 +601,7 @@ app.get('/api/admin/users', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // بن کردن / فعال کردن کاربر
-app.post('/api/admin/users/ban', authenticateToken, isAdmin, async (req, res) => {
+app.post('/api/admin/users/ban', authenticateToken, isModeratorOrAdmin, async (req, res) => {
     try {
         const user = await User.findById(req.body.userId);
         if (!user) return res.status(404).json({ message: 'کاربر نیست' });
