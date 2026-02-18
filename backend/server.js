@@ -179,7 +179,7 @@ const isModeratorOrAdmin = (req, res, next) => {
     if (req.user && (req.user.role === 'admin' || req.user.role === 'moderator')) {
         next();
     } else {
-        res.status(403).json({ message: 'شما به این بخش دسترسی ندارید' });
+        res.status(403).json({ message: 'شما دسترسی به این اطلاعات را ندارید' });
     }
 };
 
@@ -570,7 +570,7 @@ app.delete('/api/admin/knowledge/:id', authenticateToken, isAdmin, async (req, r
 });
 
 // 3. مانیتورینگ چت‌ها (با فیلتر)
-app.get('/api/admin/chat-logs', authenticateToken, isAdmin, async (req, res) => {
+app.get('/api/admin/chat-logs', authenticateToken, isModeratorOrAdmin, async (req, res) => {
     try {
         let query = {};
         if (req.query.filter === 'fallback') query.isFallbackResponse = true;
