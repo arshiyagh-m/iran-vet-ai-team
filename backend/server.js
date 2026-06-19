@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
+const treatmentRoutes = require('./routes/treatmentRoutes');
+
 
 // ==========================================
 // ⚙️ تنظیمات اولیه سرور
@@ -16,6 +18,7 @@ const PORT = process.env.PORT || 3000;
 // تنظیمات میدل‌ور (Middlewares)
 app.use(cors());
 app.use(express.json()); // قابلیت خواندن JSON در بادی درخواست‌ها
+app.use('/api/v1/calculator', treatmentRoutes);
 
 // تنظیم OpenAI
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
