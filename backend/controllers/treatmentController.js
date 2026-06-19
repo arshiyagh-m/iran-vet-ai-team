@@ -1,4 +1,6 @@
 const TreatmentProtocol = require('../models/TreatmentProtocol');
+const fs = require('fs');
+const path = require('path');
 
 // @desc    محاسبه دوز و حجم داروی مورد نیاز بر اساس گونه، بیماری و وزن
 // @route   POST /api/v1/calculator/calculate
@@ -72,57 +74,34 @@ exports.calculateDosage = async (req, res) => {
 };
 
 // ==========================================
-// بخش مربوط به تزریق داده‌های اولیه (Seed)
+// بخش مربوط به تزریق داده‌های اولیه (Seed) از فایل JSON
 // ==========================================
 
-const sampleProtocols = [
-    {
-        species: 'Cat',
-        condition: 'Urinary Spasm',
-        drugName: 'Diazepam',
-        baseDosageMgPerKg: 0.5,
-        concentrationMgPerMl: 5,
-        routeOfAdministration: 'IV',
-        triageWarnings: ['در گربه‌های با نارسایی کبد با احتیاط شدید مصرف شود.', 'تزریق وریدی بسیار آهسته باشد.'],
-        notes: 'برای شل کردن اسفنکتر مجرای ادرار در موارد احتباس ادراری.'
-    },
-    {
-        species: 'Dog',
-        condition: 'Anaphylactic Shock',
-        drugName: 'Epinephrine',
-        baseDosageMgPerKg: 0.01,
-        concentrationMgPerMl: 1,
-        routeOfAdministration: 'IM',
-        triageWarnings: ['مسیر عضلانی (IM) ترجیح داده می‌شود.', 'خطر آریتمی شدید در صورت تزریق اشتباه وریدی.'],
-        notes: 'دوز دارویی اورژانسی برای مقابله با واکنش‌های حاد آلرژیک.'
-    },
-    {
-        species: 'Poultry',
-        condition: 'Bacterial Infection',
-        drugName: 'Enrofloxacin',
-        baseDosageMgPerKg: 10,
-        concentrationMgPerMl: 100,
-        routeOfAdministration: 'PO',
-        triageWarnings: ['مدت زمان پرهیز از مصرف گوشت رعایت شود.'],
-        notes: 'برای درمان عفونت‌های تنفسی و گوارشی باکتریایی در طیور.'
-    }
-];
-
-// @desc    تزریق داده‌های اولیه به دیتابیس (فقط با باز کردن لینک)
+// @desc    تزریق داده‌های اولیه از فایل JSON به دیتابیس
 // @route   GET /api/v1/calculator/seed
 exports.seedTreatments = async (req, res) => {
     try {
-        await TreatmentProtocol.deleteMany(); // پاک کردن دیتای قبلی
-        await TreatmentProtocol.insertMany(sampleProtocols); // وارد کردن دیتای جدید
+        // پیدا کردن آدرس دقیق فایل JSON در سرور (یک پوشه قبل‌تر از کنترلرها)
+        const dataPath = path.join(__dirname, '../veterinary_data.json');
+        
+        // خواندن اطلاعات فایل
+        const rawData = fs.readFileSync(dataPath, 'utf-8');
+        const jsonData = JSON.parse(rawData);
+        
+        // پاک کردن دیتای قدیمی و وارد کردن تمام دیتای فایل JSON
+        await TreatmentProtocol.deleteMany(); 
+        await TreatmentProtocol.insertMany(jsonData); 
         
         return res.status(200).json({
             success: true,
-            message: 'داده‌های اولیه دارویی و تریاژ با موفقیت به دیتابیس تزریق شدند! 🎉'
+            totalInserted: jsonData.length,
+            message: `داده‌های کلینیکال با موفقیت به روزرسانی شدند! (${jsonData.length} رکورد اضافه شد) 🎉`
         });
     } catch (error) {
+        console.error('Seed Error:', error);
         return res.status(500).json({
             success: false,
-            message: 'خطا در تزریق داده‌ها',
+            message: 'خطا در خواندن فایل یا تزریق داده‌ها. مطمئن شوید فایل veterinary_data.json در پوشه اصلی بک‌اند وجود دارد.',
             error: error.message
         });
     }
