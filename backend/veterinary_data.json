@@ -198,6 +198,156 @@
         "routeOfAdministration": "IV",
         "triageWarnings": ["دوز مسمومیت بسیار بالاتر از دوز پیش‌بیهوشی است.", "یک‌چهارم دوز IV و مابقی IM یا SC تزریق شود تا علائم تاکی‌کاردی شدید بروز نکند."],
         "notes": "آنتاگونیست رقابتی استیل‌کولین؛ درمان نجات‌بخش مسمومیت با کودهای فسفره یا سموم ضد کک و کنه تیک‌دار."
+    },
+    {
+        "species": "Dog",
+        "condition": "Epilepsy (Maintenance)",
+        "drugName": "Levetiracetam",
+        "baseDosageMgPerKg": 20.0,
+        "concentrationMgPerMl": 100,
+        "routeOfAdministration": "PO / IV",
+        "triageWarnings": ["نیمه‌عمر کوتاهی دارد و باید حتماً هر ۸ ساعت (TID) تجویز شود.", "در بیماران با نارسایی کلیوی نیاز به تعدیل دوز دارد."],
+        "notes": "داروی ضد تشنج بسیار ایمن با حداقل متابولیسم کبدی. تداخل دارویی بسیار کمی با سایر داروهای ضدتشنج دارد."
+    },
+    {
+        "species": "Dog",
+        "condition": "Heart Failure / Hypertension",
+        "drugName": "Enalapril",
+        "baseDosageMgPerKg": 0.5,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["ممکن است باعث آزوتمی (افزایش اوره و کراتینین) شود؛ مانیتورینگ کلیوی الزامی است.", "خطر افت فشار خون (Hypotension)."],
+        "notes": "مهارکننده ACE. داروی خط اول در نارسایی احتقانی قلب (CHF) ناشی از نارسایی دریچه میترال."
+    },
+    {
+        "species": "Dog",
+        "condition": "Gastric Ulcer / Esophagitis",
+        "drugName": "Omeprazole",
+        "baseDosageMgPerKg": 1.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["برای جذب بهتر، حتماً صبح‌ها و با معده خالی (قبل از غذا) تجویز شود."],
+        "notes": "مهارکننده پمپ پروتون (PPI). بسیار موثرتر از آنتی‌اسیدهای خانواده H2 Blockers در سگ‌ها."
+    },
+    {
+        "species": "Dog",
+        "condition": "Anxiety / Storm Phobia",
+        "drugName": "Trazodone",
+        "baseDosageMgPerKg": 5.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["هرگز همزمان با مهارکننده‌های MAO (مثل سلژیلین) مصرف نشود (خطر سندرم سروتونین)."],
+        "notes": "داروی ضد اضطراب عالی برای کنترل استرس‌های محیطی، ویزیت دامپزشکی و فوبیای صدا."
+    },
+    {
+        "species": "Cat",
+        "condition": "Hyperthyroidism",
+        "drugName": "Methimazole",
+        "baseDosageMgPerKg": 2.5,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["عوارض جانبی شامل بی‌اشتهایی، استفراغ و تغییرات خونی (لکاپنی) است.", "دوز اولیه به صورت توتال در روز است و باید به دو دوز تقسیم شود (BID)."],
+        "notes": "درمان دارویی اصلی برای پرکاری تیروئید در گربه‌های مسن."
+    },
+    {
+        "species": "Cat",
+        "condition": "Chronic Kidney Disease (Proteinuria)",
+        "drugName": "Telmisartan",
+        "baseDosageMgPerKg": 1.0,
+        "concentrationMgPerMl": 4,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["فشار خون و فاکتورهای کلیوی باید به صورت دوره‌ای مانیتور شوند."],
+        "notes": "مسدودکننده گیرنده آنژیوتانسین (ARB). داروی تایید شده برای کاهش پروتئینوری در بیماری مزمن کلیوی (CKD) گربه."
+    },
+    {
+        "species": "Cat",
+        "condition": "Appetite Stimulation",
+        "drugName": "Mirtazapine",
+        "baseDosageMgPerKg": 1.88,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["دوز بالا باعث بیقراری، وکالیزیشن (سروصدا) و اسپاسم عضلانی در گربه می‌شود.", "در گربه‌های با بیماری کلیوی فاصله دوزها باید به ۴۸ تا ۷۲ ساعت افزایش یابد."],
+        "notes": "محرک اشتهای بسیار قوی. فرمولاسیون پماد ترانس‌درمال (مالیدنی روی گوش) آن نیز در جهان رایج است."
+    },
+    {
+        "species": "Cat",
+        "condition": "Pain / Fever",
+        "drugName": "Meloxicam",
+        "baseDosageMgPerKg": 0.05,
+        "concentrationMgPerMl": 5,
+        "routeOfAdministration": "SC",
+        "triageWarnings": ["گربه‌ها به شدت به NSAIDها حساس هستند. مصرف بیش از یک تک‌دوز تزریقی خطر نارسایی حاد کلیه دارد."],
+        "notes": "فقط برای یک بار تزریق به عنوان ضددرد پس از عمل جراحی (مثل عقیم‌سازی) استفاده شود."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Bovine Ketosis",
+        "drugName": "Propylene Glycol",
+        "baseDosageMgPerKg": 0, 
+        "concentrationMgPerMl": 1000,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["در گاوهایی که رفلکس بلع ندارند یا زمین‌گیر هستند به شدت با احتیاط خورانده شود (خطر پنومونی استنشاقی).", "مصرف بیش از حد باعث مسمومیت و اسیدوز لاکتیک می‌شود."],
+        "notes": "دوز استاندارد در گاو بالغ حدود ۲۵۰ تا ۳۰۰ میلی‌لیتر (سی‌سی) خوراکی به صورت روزانه است."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Hypocalcemia (Milk Fever)",
+        "drugName": "Calcium Gluconate 23%",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 230,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["تزریق وریدی باید بسیار آهسته انجام شود (حداقل طی ۱۰ الی ۱۵ دقیقه).", "سمع قلب حین تزریق الزامی است؛ در صورت بروز آریتمی یا برادی‌کاردی تزریق متوقف شود."],
+        "notes": "دوز معمول در گاو بالغ یک بطری ۵۰۰ میلی‌لیتری است. داروی حیاتی در تب شیر."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Equine Asthma (RAO)",
+        "drugName": "Dexamethasone",
+        "baseDosageMgPerKg": 0.05,
+        "concentrationMgPerMl": 2,
+        "routeOfAdministration": "IV / IM",
+        "triageWarnings": ["در اسب‌ها استفاده طولانی‌مدت یا دوز بالای کورتیکواستروئیدها خطر لامینایتس (Laminitis) را به شدت افزایش می‌دهد."],
+        "notes": "گلوکوکورتیکوئید قوی برای کنترل حملات حاد تنفسی و آلرژیک در اسب."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Bovine Respiratory Disease (BRD)",
+        "drugName": "Florfenicol",
+        "baseDosageMgPerKg": 20.0,
+        "concentrationMgPerMl": 300,
+        "routeOfAdministration": "IM",
+        "triageWarnings": ["تزریق فقط در عضلات گردن انجام شود.", "حداکثر حجم تزریق در هر ناحیه نباید بیشتر از ۱۰ میلی‌لیتر باشد.", "دوره پرهیز از مصرف گوشت طولانی (حداقل ۲۸ روز) دارد."],
+        "notes": "آنتی‌بیوتیک بسیار موثر در درمان تب حمل و نقل و پنومونی گوساله‌ها."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Coccidiosis (Treatment)",
+        "drugName": "Sulfadimethoxine",
+        "baseDosageMgPerKg": 50.0,
+        "concentrationMgPerMl": 200,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["دسترسی به آب تازه و کافی در طول درمان الزامی است تا از رسوب کریستال‌های سولفا در کلیه جلوگیری شود."],
+        "notes": "درمان موثر در شیوع حاد کوکسیدیوز و همچنین وبای طیور (Fowl Cholera)."
+    },
+    {
+        "species": "Bee",
+        "condition": "Varroa Destructor (Mite Outbreak)",
+        "drugName": "Amitraz",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "Topical (Strip / Vapor)",
+        "triageWarnings": ["در زمان جریان شهد و برداشت عسل استفاده نشود.", "استفاده بی‌رویه باعث ایجاد مقاومت شدید در کنه‌های واروا می‌شود."],
+        "notes": "معمولاً به صورت نوارهای تدخینی در کندو قرار می‌گیرد (مثلاً Apivar). دوز بر اساس تعداد قاب محاسبه می‌شود نه وزن زنبور."
+    },
+    {
+        "species": "Bee",
+        "condition": "European Foulbrood (EFB)",
+        "drugName": "Oxytetracycline",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["در بسیاری از کشورها استفاده از آنتی‌بیوتیک در زنبورداری ممنوع است. فقط با تاییدیه کلینیکال و نسخه دامپزشک مصرف شود.", "حداقل ۶ هفته قبل از جریان اصلی شهد درمان متوقف شود."],
+        "notes": "برای درمان لوک اروپایی. به صورت پودر مخلوط با پودر شکر (Dusting) روی قاب‌ها ریخته می‌شود."
     }
 ]
 
