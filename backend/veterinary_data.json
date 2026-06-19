@@ -348,6 +348,146 @@
         "routeOfAdministration": "PO",
         "triageWarnings": ["در بسیاری از کشورها استفاده از آنتی‌بیوتیک در زنبورداری ممنوع است. فقط با تاییدیه کلینیکال و نسخه دامپزشک مصرف شود.", "حداقل ۶ هفته قبل از جریان اصلی شهد درمان متوقف شود."],
         "notes": "برای درمان لوک اروپایی. به صورت پودر مخلوط با پودر شکر (Dusting) روی قاب‌ها ریخته می‌شود."
+    },
+    {
+        "species": "Dog",
+        "condition": "Induction of Anesthesia",
+        "drugName": "Propofol",
+        "baseDosageMgPerKg": 4.0,
+        "concentrationMgPerMl": 10,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["تزریق باید به صورت آهسته (طی ۶۰ ثانیه) انجام شود تا از آپنه (ایست تنفسی) جلوگیری شود.", "دارو فاقد اثرات ضد درد (Analgesia) است."],
+        "notes": "بیهوش‌کننده کوتاه‌اثر. اگر حیوان پیش‌بیهوشی دریافت نکرده باشد، ممکن است دوز تا 6 mg/kg افزایش یابد."
+    },
+    {
+        "species": "Dog",
+        "condition": "Emesis Induction (Toxicity)",
+        "drugName": "Apomorphine",
+        "baseDosageMgPerKg": 0.03,
+        "concentrationMgPerMl": 1,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["در حیوانات با کاهش سطح هوشیاری یا مسمومیت با مواد سوزاننده (اسید/باز) به شدت منع مصرف دارد."],
+        "notes": "سریع‌ترین و موثرترین داروی قی‌آور (Emetic) در سگ‌ها. می‌توان به صورت قطره داخل چشم (ملتحمه) نیز استفاده کرد."
+    },
+    {
+        "species": "Dog",
+        "condition": "Congestive Heart Failure (CHF)",
+        "drugName": "Pimobendan",
+        "baseDosageMgPerKg": 0.25,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["باید حتماً با معده خالی (یک ساعت قبل از غذا) داده شود تا جذب حداکثری داشته باشد."],
+        "notes": "اینوتروپ مثبت و گشادکننده عروق (Inodilator). معمولاً هر ۱۲ ساعت (BID) تجویز می‌شود."
+    },
+    {
+        "species": "Dog",
+        "condition": "Sedation / Analgesia",
+        "drugName": "Dexmedetomidine",
+        "baseDosageMgPerKg": 0.005,
+        "concentrationMgPerMl": 0.5,
+        "routeOfAdministration": "IM / IV",
+        "triageWarnings": ["باعث برادی‌کاردی شدید و کاهش برون‌ده قلبی می‌شود. در بیماران قلبی منع مصرف دارد.", "با آتیپامزول (Atipamezole) قابل برگشت است."],
+        "notes": "آگونیست آلفا-۲. دوز بر اساس سطح بدن (متر مربع) دقیق‌تر از وزن است، اما این دوز پایه برای سگ‌های متوسط استفاده می‌شود."
+    },
+    {
+        "species": "Cat",
+        "condition": "Pre-visit Sedation / Anxiety",
+        "drugName": "Gabapentin",
+        "baseDosageMgPerKg": 15.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["ممکن است باعث آتاکسی (عدم تعادل) موقت شود.", "فرم مایع انسانی آن ممکن است حاوی زایلیتول باشد که برای حیوانات سمی است (همیشه از کپسول استفاده شود)."],
+        "notes": "داروی طلایی برای کاهش استرس گربه‌ها قبل از مراجعه به کلینیک. ۱ تا ۲ ساعت قبل از ویزیت خورانده شود."
+    },
+    {
+        "species": "Cat",
+        "condition": "Severe Pain (Opioid Analgesia)",
+        "drugName": "Methadone",
+        "baseDosageMgPerKg": 0.2,
+        "concentrationMgPerMl": 10,
+        "routeOfAdministration": "IM / IV",
+        "triageWarnings": ["تزریق وریدی سریع ممکن است باعث افت فشار خون شود.", "مانیتورینگ تنفسی الزامی است."],
+        "notes": "آگونیست کامل گیرنده میو (Mu). بر خلاف مورفین، در گربه‌ها کمتر باعث استفراغ می‌شود."
+    },
+    {
+        "species": "Cat",
+        "condition": "Feline Lower Urinary Tract Disease (FLUTD)",
+        "drugName": "Prazosin",
+        "baseDosageMgPerKg": 0.5,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["خطر افت ناگهانی فشار خون. اولین دوز بهتر است در کلینیک تحت نظارت داده شود."],
+        "notes": "اسپاسمولیتیک عالی برای شل کردن اسفنکتر مجرای ادرار در گربه‌های بلوکه شده (Blocked Tom)."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "General Anesthesia Induction",
+        "drugName": "Ketamine",
+        "baseDosageMgPerKg": 2.2,
+        "concentrationMgPerMl": 100,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["هرگز به تنهایی در اسب تزریق نشود! حتماً باید بعد از آرام‌بخش عمیق با زایلازین یا دتومیدین تجویز شود، در غیر این صورت باعث تشنج و کاتالپسی می‌شود."],
+        "notes": "بیهوش‌کننده تجزیه‌ای (Dissociative). چشم‌ها حین بیهوشی باز می‌مانند، پماد چشمی نیاز است."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Systemic Infection",
+        "drugName": "Oxytetracycline (Long-Acting 20%)",
+        "baseDosageMgPerKg": 20.0,
+        "concentrationMgPerMl": 200,
+        "routeOfAdministration": "IM",
+        "triageWarnings": ["تزریق عضلانی ممکن است دردناک باشد و باعث واکنش بافتی شود.", "بیش از ۱۰ میلی‌لیتر در یک ناحیه تزریق نشود.", "در اسب‌ها با احتیاط شدید مصرف شود (خطر اسهال کشنده X بر اثر تغییر فلور روده)."],
+        "notes": "آنتی‌بیوتیک وسیع‌الطیف برای گاو و گوسفند. اثر دارو تا ۳ الی ۴ روز در بدن باقی می‌ماند."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Colic Analgesia",
+        "drugName": "Butorphanol",
+        "baseDosageMgPerKg": 0.1,
+        "concentrationMgPerMl": 10,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["به عنوان تنها داروی ضد درد در کولیک‌های شدید اسب کافی نیست و باید با آلفا-۲ آگونیست‌ها (مثل زایلازین) ترکیب شود."],
+        "notes": "داروی مخدر (آگونیست-آنتاگونیست). علاوه بر تسکین درد، اثر ضد سرفه قوی نیز دارد."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Mycoplasmosis / CRD",
+        "drugName": "Lincomycin + Spectinomycin",
+        "baseDosageMgPerKg": 50.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["در پرندگانی که تخم آن‌ها مصرف انسانی دارد استفاده نشود (پرهیز از مصرف در مرغ تخم‌گذار تجاری)."],
+        "notes": "ترکیب آنتی‌بیوتیکی بسیار قدرتمند (L-S) برای کنترل عفونت‌های تنفسی و کیسه‌های هوایی در طیور گوشتی. در آب آشامیدنی مخلوط می‌شود."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Fowl Cholera / Coryza",
+        "drugName": "Amoxicillin",
+        "baseDosageMgPerKg": 15.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["درمان باید حداقل ۳ تا ۵ روز متوالی ادامه یابد."],
+        "notes": "آنتی‌بیوتیک بتالاکتام. به صورت پودر محلول در آب برای گله استفاده می‌شود."
+    },
+    {
+        "species": "Bee",
+        "condition": "Varroa Destructor (Organic Treatment)",
+        "drugName": "Formic Acid",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 650,
+        "routeOfAdministration": "Topical (Evaporation)",
+        "triageWarnings": ["وابستگی شدید به دمای محیط دارد. اگر دمای هوا بالای ۲۹ درجه سانتی‌گراد باشد، باعث مرگ نوزادان و فرار ملکه می‌شود.", "استفاده از دستکش و ماسک ضد اسید برای اپراتور الزامی است."],
+        "notes": "اسید فرمیک ۶۵٪. یکی از معدود داروهایی است که می‌تواند به داخل سلول‌های درپوش‌دار نفوذ کرده و کنه‌ها را از بین ببرد."
+    },
+    {
+        "species": "Bee",
+        "condition": "Chalkbrood Disease",
+        "drugName": "Thymol",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "Topical",
+        "triageWarnings": ["در زمان جریان شهد استفاده نشود زیرا طعم و بوی عسل را تغییر می‌دهد."],
+        "notes": "یک ترکیب گیاهی و ارگانیک که علاوه بر کنترل کنه واروا، خاصیت قارچ‌کشی دارد و در بیماری نوزاد گچی استفاده می‌شود."
     }
 ]
-
+    
