@@ -18,6 +18,8 @@ import Login from './pages/auth/Login';
 import Bots from './pages/public/Bots';
 import FAQ from './pages/public/FAQ';
 import Terms from './pages/public/Terms';
+import ClinicalTriage from './pages/public/ClinicalTriage';
+
 
 // --- صفحات پنل کاربری ---
 import Overview from './pages/dashboard/Overview';
@@ -58,7 +60,7 @@ const App = () => {
         <Route path="/bots" element={<><Header /><Bots /><Footer /></>} />
         <Route path="/faq" element={<><Header /><FAQ /><Footer /></>} />
         <Route path="/terms" element={<><Header /><Terms /><Footer /></>} />
-        
+        <Route path="/triage-calculator" element={<ClinicalTriage />} />
         <Route path="/login" element={<><Header /><Login /><Footer /></>} />
         <Route path="/register" element={<><Header /><Login /><Footer /></>} />
 
