@@ -98,6 +98,106 @@
         "routeOfAdministration": "IV",
         "triageWarnings": ["گربه‌ها به لیدوکائین بسیار حساس هستند و دوز سگ نباید برای آن‌ها استفاده شود.", "هرگز از لیدوکائین حاوی اپی‌نفرین به صورت IV استفاده نشود."],
         "notes": "درمان اورژانسی برای آریتمی‌های بطنی."
+    },
+    {
+        "species": "Dog",
+        "condition": "Acute Pain / Inflammation",
+        "drugName": "Carprofen",
+        "baseDosageMgPerKg": 4.4,
+        "concentrationMgPerMl": 50,
+        "routeOfAdministration": "SC",
+        "triageWarnings": ["در سگ‌های با سابقه خونریزی گوارشی یا بیماری کلیوی منع مصرف دارد.", "هرگز همزمان با کورتیکواستروئیدها مصرف نشود."],
+        "notes": "یک NSAID بسیار رایج برای کنترل درد پس از جراحی‌های ارتوپدی و بافت نرم."
+    },
+    {
+        "species": "Cat",
+        "condition": "Severe Bacterial Infection",
+        "drugName": "Enrofloxacin",
+        "baseDosageMgPerKg": 5.0,
+        "concentrationMgPerMl": 50,
+        "routeOfAdministration": "SC",
+        "triageWarnings": ["دوزهای بالای ۵ میلی‌گرم بر کیلوگرم در گربه‌ها خطر نابینایی و دژنراسیون شبکیه دارد.", "تزریق وریدی سریع ممنوع است."],
+        "notes": "آنتی‌بیوتیک فلوروکینولونی وسیع‌الطیف. در گربه‌ها حتماً به سقف دوز دقت شود."
+    },
+    {
+        "species": "Dog",
+        "condition": "Acute Vomiting / Motion Sickness",
+        "drugName": "Maropitant",
+        "baseDosageMgPerKg": 1.0,
+        "concentrationMgPerMl": 10,
+        "routeOfAdministration": "SC",
+        "triageWarnings": ["تزریق زیرپوستی ممکن است باعث سوزش شدید موضعی شود (نگهداری دارو در یخچال قبل تزریق این سوزش را کم می‌کند)."],
+        "notes": "داروی Cerenia، آنتی‌امتیک بسیار قدرتمند و خط اول کنترل تهوع در پانکراتیت و گاستروانتریت."
+    },
+    {
+        "species": "Cat",
+        "condition": "Severe Dehydration / Shock",
+        "drugName": "Hypertonic Saline 7.2%",
+        "baseDosageMgPerKg": 4.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["در حیوانات با هایپرناترمی یا دهیدراتاسیون شدید بدون دسترسی به آب منع مصرف دارد.", "تزریق باید در مدت ۱۰ الی ۱۵ دقیقه انجام شود."],
+        "notes": "برای احیای سریع حجم داخل عروقی در شوک‌های هیپوولمیک."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Acute Mastitis / Metritis",
+        "drugName": "Ceftiofur Sodium",
+        "baseDosageMgPerKg": 2.2,
+        "concentrationMgPerMl": 50,
+        "routeOfAdministration": "IM",
+        "triageWarnings": ["دوره پرهیز از مصرف گوشت رعایت شود (معمولا در برخی برندها زمان پرهیز شیر صفر است اما باید چک شود)."],
+        "notes": "سفالوسپورین نسل سوم، بسیار موثر بر باکتری‌های گرم منفی و مثبت در گاوهای شیری."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Severe Cattle Internal Parasites",
+        "drugName": "Ivermectin 1%",
+        "baseDosageMgPerKg": 0.2,
+        "concentrationMgPerMl": 10,
+        "routeOfAdministration": "SC",
+        "triageWarnings": ["فقط به صورت زیرپوستی تزریق شود؛ تزریق عضلانی یا وریدی خطرناک است.", "دوره پرهیز از مصرف گوشت طولانی‌مدت دارد."],
+        "notes": "ضد انگل وسیع‌الطیف علیه کرم‌های گرد گوارشی-تنفسی و انگل‌های خارجی (جرب و شپش)."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Necrotic Enteritis",
+        "drugName": "Neomycin Sulfate",
+        "baseDosageMgPerKg": 20,
+        "concentrationMgPerMl": 200,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["جذب سیستمیک گوارشی بسیار کمی دارد و فقط بر لومن روده موثر است.", "در پرندگان تخم‌گذاری که تخم آن‌ها مصرف انسانی دارد با احتیاط مصرف شود."],
+        "notes": "آمینوگلیکوزید موثر بر باکتری‌های گرم منفی روده نظیر ایشرشیا کلی در گله."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Coccidiosis (Outbreak)",
+        "drugName": "Toltrazuril 2.5%",
+        "baseDosageMgPerKg": 7.0,
+        "concentrationMgPerMl": 25,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["مدت مصرف معمولاً دو روز متوالی در آب آشامیدنی است.", "آب مصرفی گله باید دقیقاً محاسبه شود تا اوردوز رخ ندهد."],
+        "notes": "داروی بسیار قوی که بر تمام مراحل درون‌یاخته‌ای کوکسیدیا اثر می‌گذارد."
+    },
+    {
+        "species": "Bee",
+        "condition": "Nosemosis (Nosema apis/ceranae)",
+        "drugName": "Fumagillin",
+        "baseDosageMgPerKg": 20,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["مصرف دارو در زمان جریان شهد و عسل‌سازی به شدت ممنوع است تا عسل آلوده نشود.", "فقط در تغذیه پاییزه یا اوایل بهار استفاده شود."],
+        "notes": "تنها آنتی‌بیوتیک اختصاصی تایید شده برای کنترل و درمان نوزما در زنبور عسل (مخلوط در شربت شکر)."
+    },
+    {
+        "species": "Dog",
+        "condition": "Organophosphate Poisoning",
+        "drugName": "Atropine Sulfate (High Dose)",
+        "baseDosageMgPerKg": 0.2,
+        "concentrationMgPerMl": 0.5,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["دوز مسمومیت بسیار بالاتر از دوز پیش‌بیهوشی است.", "یک‌چهارم دوز IV و مابقی IM یا SC تزریق شود تا علائم تاکی‌کاردی شدید بروز نکند."],
+        "notes": "آنتاگونیست رقابتی استیل‌کولین؛ درمان نجات‌بخش مسمومیت با کودهای فسفره یا سموم ضد کک و کنه تیک‌دار."
     }
 ]
 
