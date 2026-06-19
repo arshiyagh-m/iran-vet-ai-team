@@ -3,6 +3,11 @@ import { Link, useLocation } from 'react-router-dom';
 import { FaBars, FaTimes, FaRobot, FaUser, FaSignInAlt } from 'react-icons/fa';
 // 👇 ایمپورت لوگو
 import logo from '../../assets/logo.png';
+import { Link } from 'react-router-dom';
+
+// این بخش را کنار بقیه لینک‌های منو (مثل صفحه اصلی، درباره ما و غیره) قرار بده:
+
+
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -38,6 +43,17 @@ const Header = () => {
             <Link to="/faq" className={`text-sm font-medium transition ${location.pathname === '/faq' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600'}`}>
               سوالات متداول
             </Link>
+            <Link 
+  to="/triage-calculator" 
+  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+>
+  <span>🧮</span>
+  <span>ماشین‌حساب تریاژ</span>
+</Link>
+
+
+            
+            
           </div>
 
           {/* دکمه‌های سمت چپ */}
