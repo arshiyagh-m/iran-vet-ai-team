@@ -73,36 +73,4 @@ exports.calculateDosage = async (req, res) => {
     }
 };
 
-// ==========================================
-// بخش مربوط به تزریق داده‌های اولیه (Seed) از فایل JSON
-// ==========================================
-
-// @desc    تزریق داده‌های اولیه از فایل JSON به دیتابیس
-// @route   GET /api/v1/calculator/seed
-exports.seedTreatments = async (req, res) => {
-    try {
-        // پیدا کردن آدرس دقیق فایل JSON در سرور (یک پوشه قبل‌تر از کنترلرها)
-        const dataPath = path.join(__dirname, '../veterinary_data.json');
-        
-        // خواندن اطلاعات فایل
-        const rawData = fs.readFileSync(dataPath, 'utf-8');
-        const jsonData = JSON.parse(rawData);
-        
-        // پاک کردن دیتای قدیمی و وارد کردن تمام دیتای فایل JSON
-        await TreatmentProtocol.deleteMany(); 
-        await TreatmentProtocol.insertMany(jsonData); 
-        
-        return res.status(200).json({
-            success: true,
-            totalInserted: jsonData.length,
-            message: `داده‌های کلینیکال با موفقیت به روزرسانی شدند! (${jsonData.length} رکورد اضافه شد) 🎉`
-        });
-    } catch (error) {
-        console.error('Seed Error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'خطا در خواندن فایل یا تزریق داده‌ها. مطمئن شوید فایل veterinary_data.json در پوشه اصلی بک‌اند وجود دارد.',
-            error: error.message
-        });
-    }
-};
+// =================
