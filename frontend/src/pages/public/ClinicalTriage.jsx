@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const ClinicalTriage = () => {
@@ -7,15 +7,61 @@ const ClinicalTriage = () => {
     condition: '',
     weight: ''
   });
+  
+  // استیت‌های جدید برای مدیریت لیست بیماری‌ها و جستجوی هوشمند
+  const [conditions, setConditions] = useState([]);
+  const [filteredConditions, setFilteredConditions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 👇 آدرس دقیق بک‌اند روی سرور Render جایگزین شد
-  const API_URL = 'https://vet-ai-api.onrender.com/api/v1/calculator/calculate'; 
+  const BASE_URL = 'https://vet-ai-api.onrender.com/api/v1/calculator'; 
+
+  // ۱. به محض تغییر گونه هدف، لیست بیماری‌های آن گونه از بک‌اند دریافت می‌شود
+  useEffect(() => {
+    const fetchConditions = async () => {
+      try {
+        const response = await axios.get(`${BASE_URL}/conditions/${formData.species}`);
+        if (response.data.success) {
+          setConditions(response.data.data);
+        }
+      } catch (err) {
+        console.error('خطا در دریافت لیست بیماری‌ها:', err);
+      }
+    };
+    
+    fetchConditions();
+    // ریست کردن فیلد بیماری و نتایج قبلی با تغییر گونه حیوان
+    setFormData(prev => ({ ...prev, condition: '' }));
+    setResults(null);
+    setShowSuggestions(false);
+  }, [formData.species]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // ۲. فیلتر کردن هوشمند لیست بیماری‌ها همزمان با تایپ کاربر
+    if (name === 'condition') {
+      if (value.trim() === '') {
+        setFilteredConditions([]);
+        setShowSuggestions(false);
+      } else {
+        const filtered = conditions.filter(c =>
+          c.toLowerCase().includes(value.toLowerCase())
+        );
+        setFilteredConditions(filtered);
+        setShowSuggestions(true);
+      }
+    }
+  };
+
+  // ۳. انتخاب بیماری از لیست پیشنهادی
+  const handleSelectCondition = (cond) => {
+    setFormData(prev => ({ ...prev, condition: cond }));
+    setShowSuggestions(false);
   };
 
   const handleSubmit = async (e) => {
@@ -23,17 +69,17 @@ const ClinicalTriage = () => {
     setLoading(true);
     setError(null);
     setResults(null);
+    setShowSuggestions(false);
 
     try {
-      const response = await axios.post(API_URL, {
+      const response = await axios.post(`${BASE_URL}/calculate`, {
         species: formData.species,
         condition: formData.condition,
         weight: Number(formData.weight)
       });
       setResults(response.data.results);
     } catch (err) {
-      // مدیریت خطاهای سرور به شکل تمیز
-      setError(err.response?.data?.message || 'خطایی در ارتباط با سرور رخ داد. لطفا اتصال اینترنت یا وضعیت سرور را بررسی کنید.');
+      setError(err.response?.data?.message || 'خطایی در ارتباط با سرور رخ داد.');
     } finally {
       setLoading(false);
     }
@@ -69,17 +115,35 @@ const ClinicalTriage = () => {
                 </select>
               </div>
 
-              <div>
+              {/* فیلد بیماری همراه با منوی پیشنهادات هوشمند */}
+              <div className="relative">
                 <label className="block text-gray-700 text-sm font-bold mb-2">بیماری / وضعیت</label>
                 <input 
                   type="text" 
                   name="condition" 
-                  placeholder="مثال: Urinary Spasm" 
+                  placeholder="تایپ کنید... (مثال: Shock)" 
                   value={formData.condition} 
                   onChange={handleChange}
+                  onFocus={() => formData.condition && setShowSuggestions(true)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-left dir-ltr focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required 
+                  autoComplete="off"
                 />
+                
+                {/* باکس پیشنهادات هوشمند (Dropdown) */}
+                {showSuggestions && filteredConditions.length > 0 && (
+                  <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto text-left dir-ltr">
+                    {filteredConditions.map((cond, index) => (
+                      <li 
+                        key={index}
+                        onClick={() => handleSelectCondition(cond)}
+                        className="px-4 py-2 hover:bg-blue-50 cursor-pointer text-gray-700 transition font-medium text-sm border-b border-gray-50 last:border-none"
+                      >
+                        {cond}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               <div>
