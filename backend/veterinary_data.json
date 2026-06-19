@@ -488,6 +488,465 @@
         "routeOfAdministration": "Topical",
         "triageWarnings": ["در زمان جریان شهد استفاده نشود زیرا طعم و بوی عسل را تغییر می‌دهد."],
         "notes": "یک ترکیب گیاهی و ارگانیک که علاوه بر کنترل کنه واروا، خاصیت قارچ‌کشی دارد و در بیماری نوزاد گچی استفاده می‌شود."
+    },
+    {
+        "species": "Dog",
+        "condition": "Severe Diarrhea / Giardiasis",
+        "drugName": "Metronidazole",
+        "baseDosageMgPerKg": 15.0,
+        "concentrationMgPerMl": 5,
+        "routeOfAdministration": "PO / IV",
+        "triageWarnings": ["دوزهای بالا یا استفاده طولانی‌مدت می‌تواند باعث مسمومیت عصبی (تشنج، آتاکسی و لرزش) شود.", "در حیوانات باردار به شدت منع مصرف دارد."],
+        "notes": "آنتی‌بیوتیک و ضد انگل تک‌یاخته‌ای بسیار پرکاربرد. تزریق وریدی باید آهسته (طی ۲۰ دقیقه) انجام شود."
+    },
+    {
+        "species": "Dog",
+        "condition": "Rodenticide Poisoning (Anticoagulant)",
+        "drugName": "Vitamin K1 (Phytonadione)",
+        "baseDosageMgPerKg": 2.5,
+        "concentrationMgPerMl": 10,
+        "routeOfAdministration": "SC / PO",
+        "triageWarnings": ["هرگز به صورت وریدی (IV) تزریق نشود؛ خطر آنافیلاکسی شدید و مرگ ناگهانی وجود دارد.", "تزریق عضلانی (IM) به دلیل خطر خونریزی در محل تزریق ممنوع است."],
+        "notes": "پادزهر اختصاصی مسمومیت با مرگ‌موش. دوز اولیه زیرپوستی و ادامه درمان به صورت خوراکی (همراه با غذای چرب) تا چند هفته."
+    },
+    {
+        "species": "Dog",
+        "condition": "Ventricular Arrhythmias / CPR",
+        "drugName": "Amiodarone",
+        "baseDosageMgPerKg": 5.0,
+        "concentrationMgPerMl": 50,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["فقط در شرایط مانیتورینگ دقیق نوار قلب (ECG) استفاده شود.", "تزریق سریع می‌تواند باعث افت شدید فشار خون شود."],
+        "notes": "داروی ضد آریتمی کلاس III. در زمان احیای قلبی ریوی (CPR) برای فیبریلاسیون بطنی مقاوم به شوک استفاده می‌شود."
+    },
+    {
+        "species": "Cat",
+        "condition": "Feline Asthma / Bronchospasm",
+        "drugName": "Terbutaline",
+        "baseDosageMgPerKg": 0.01,
+        "concentrationMgPerMl": 1,
+        "routeOfAdministration": "SC / IV",
+        "triageWarnings": ["ممکن است باعث تاکی‌کاردی (افزایش ضربان قلب) و ترمور عضلانی شود."],
+        "notes": "برونکودیلاتور (گشادکننده برونش) سریع‌الاثر. برای کنترل حملات حاد تنفسی در گربه‌های مبتلا به آسم."
+    },
+    {
+        "species": "Cat",
+        "condition": "Hypoglycemic Crisis",
+        "drugName": "Dextrose 50%",
+        "baseDosageMgPerKg": 500.0, 
+        "concentrationMgPerMl": 500,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["دکستروز ۵۰٪ به شدت هایپرتونیک است و باید حتماً با سرم فیزیولوژی رقیق شود (حداقل به نسبت ۱ به ۱) وگرنه باعث فلبیت و نکروز رگ می‌شود."],
+        "notes": "دوز پایه معادل ۰.۵ تا ۱ گرم بر کیلوگرم است. درمان نجات‌بخش در افت قند خون شدید (مثلا در بچه گربه‌ها یا اوردوز انسولین)."
+    },
+    {
+        "species": "Cat",
+        "condition": "Ear Mites / Fleas / Heartworm Prevention",
+        "drugName": "Selamectin",
+        "baseDosageMgPerKg": 6.0,
+        "concentrationMgPerMl": 60,
+        "routeOfAdministration": "Topical (Spot-on)",
+        "triageWarnings": ["فقط روی پوست سالم و بدون زخم در ناحیه پشت گردن (دور از دسترس لیس زدن) ریخته شود."],
+        "notes": "ضدانگل وسیع‌الطیف (برند Revolution). در گربه‌های زیر ۸ هفته با احتیاط مصرف شود."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Estrus Synchronization / Pyometra",
+        "drugName": "Dinoprost Tromethamine (PGF2a)",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 5,
+        "routeOfAdministration": "IM",
+        "triageWarnings": ["زنان باردار و افراد مبتلا به آسم هرگز نباید با این دارو تماس پوستی داشته باشند (خطر سقط جنین و اسپاسم تنفسی).", "فقط تزریق عضلانی عمیق مجاز است."],
+        "notes": "دوز معمول در گاو بالغ ۲۵ میلی‌گرم (۵ سی‌سی) به صورت توتال است. برای همگام‌سازی فحلی و تخلیه رحم استفاده می‌شود."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Tetanus Prophylaxis (Wounds/Surgery)",
+        "drugName": "Tetanus Antitoxin",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "SC / IM",
+        "triageWarnings": ["درمان با آنتی‌توکسین ایمنی کوتاه‌مدت (حدود ۲ تا ۳ هفته) ایجاد می‌کند.", "احتمال واکنش آنافیلاکسی، خصوصاً در تزریق‌های مکرر وجود دارد."],
+        "notes": "دوز پروفیلاکسی در اسب بالغ حداقل ۱۵۰۰ تا ۳۰۰۰ واحد بین‌المللی (IU) است. همزمان با واکسن توکسوئید (در محل متفاوت) قابل استفاده است."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Udder Edema / Fluid Retention",
+        "drugName": "Furosemide",
+        "baseDosageMgPerKg": 1.0,
+        "concentrationMgPerMl": 50,
+        "routeOfAdministration": "IM / IV",
+        "triageWarnings": ["دسترسی آزاد به آب پس از تزریق الزامی است.", "مصرف همزمان با کورتیکواستروئیدها خطر هایپوکالمی (کاهش پتاسیم خون) را افزایش می‌دهد."],
+        "notes": "دیورتیک بسیار قوی. در گاوهای شیری معمولاً دوز ۵۰۰ میلی‌گرم (۱۰ سی‌سی) تجویز می‌شود."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Coccidiosis (Prevention in Feed)",
+        "drugName": "Salinomycin",
+        "baseDosageMgPerKg": 60.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO (In Feed)",
+        "triageWarnings": ["برای بوقلمون‌ها و اسب‌ها به شدت سمی و کشنده است. از آلودگی متقاطع خوراک جداً خودداری شود."],
+        "notes": "یونوفر ضد کوکسیدیوز. دوز ذکر شده معادل ۶۰ گرم ماده موثره در هر تن خوراک طیور گوشتی است."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Nematode Infection (Worms)",
+        "drugName": "Fenbendazole",
+        "baseDosageMgPerKg": 1.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["در طول دوره پرلک (لک‌رفتن یا تولک‌بری) مصرف نشود زیرا می‌تواند باعث بدشکلی پرها شود."],
+        "notes": "ضدانگل بسیار ایمن برای درمان کرم‌های گرد گوارشی در مرغ. دوره پرهیز از مصرف تخم‌مرغ معمولاً ندارد (بسته به برند چک شود)."
+    },
+    {
+        "species": "Bee",
+        "condition": "Varroa Destructor (Synthetic Pyrethroid)",
+        "drugName": "Tau-fluvalinate",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "Topical (Strip)",
+        "triageWarnings": ["استفاده مکرر و طولانی‌مدت در سال‌های اخیر باعث ایجاد مقاومت شدید ژنتیکی در کنه‌های واروا شده است.", "نوارهای دارویی نباید بیش از ۶ الی ۸ هفته داخل کندو بمانند."],
+        "notes": "برند تجاری معروف آن Apistan است. در زمان تولید و جریان عسل نباید در کندو حضور داشته باشد."
+    },
+    {
+        "species": "Bee",
+        "condition": "Wax Moth Prevention (Stored Combs)",
+        "drugName": "Bacillus thuringiensis (Bt)",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "Topical (Spray)",
+        "triageWarnings": ["فقط روی قاب‌های خالی از زنبور (در انبار) اسپری شود.", "این ترکیب بیولوژیک است و باید از یخ‌زدگی یا نور مستقیم خورشید محافظت شود."],
+        "notes": "ایمن‌ترین روش برای محافظت از قاب‌های موم‌دار در برابر کرم موم‌خوار. برای زنبورها، انسان و پستانداران کاملاً بی‌خطر است."
+    },
+    {
+        "species": "Dog",
+        "condition": "Glaucoma (Acute)",
+        "drugName": "Latanoprost 0.005%",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "Topical (Ophthalmic)",
+        "triageWarnings": ["در سگ‌های مبتلا به یووئیت (Uveitis) یا در رفتگی عدسی چشم به شدت منع مصرف دارد."],
+        "notes": "آنالوگ پروستاگلاندین. دوز آن ۱ قطره در چشم درگیر است. باعث کاهش سریع و چشمگیر فشار داخل چشم (IOP) می‌شود."
+    },
+    {
+        "species": "Dog",
+        "condition": "Hypothyroidism",
+        "drugName": "Levothyroxine",
+        "baseDosageMgPerKg": 0.02,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["حضور غذا در معده، جذب دارو را به شدت کاهش می‌دهد. باید با معده خالی (یک ساعت قبل از غذا) تجویز شود."],
+        "notes": "هورمون جایگزین تیروئید. معمولاً درمان به صورت هر ۱۲ ساعت (BID) آغاز می‌شود و دوز بر اساس آزمایش خون تنظیم می‌گردد."
+    },
+    {
+        "species": "Dog",
+        "condition": "Cushing's Disease (Hyperadrenocorticism)",
+        "drugName": "Trilostane",
+        "baseDosageMgPerKg": 2.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["باید حتماً همراه با غذا داده شود تا جذب مناسبی داشته باشد.", "اوردوز دارو می‌تواند باعث بحران آدرنال (Addisonian Crisis) کشنده شود."],
+        "notes": "مهارکننده سنتز استروئید. خط اول درمان دارویی کوشینگ وابسته به هیپوفیز و آدرنال در سگ‌ها."
+    },
+    {
+        "species": "Cat",
+        "condition": "Acetaminophen (Paracetamol) Toxicity",
+        "drugName": "N-acetylcysteine (NAC)",
+        "baseDosageMgPerKg": 140.0,
+        "concentrationMgPerMl": 200,
+        "routeOfAdministration": "IV / PO",
+        "triageWarnings": ["گربه‌ها فاقد آنزیم کافی برای متابولیسم استامینوفن هستند و حتی نصف یک قرص می‌تواند کشنده باشد.", "تزریق وریدی باید بسیار آهسته و رقیق‌شده انجام شود."],
+        "notes": "پادزهر اختصاصی. دوز ذکر شده، دوز بارگیری (Loading Dose) اولیه است. پس از آن باید ۷۰ میلی‌گرم بر کیلوگرم هر ۶ ساعت تکرار شود."
+    },
+    {
+        "species": "Cat",
+        "condition": "Feline Infectious Peritonitis (FIP)",
+        "drugName": "GS-441524",
+        "baseDosageMgPerKg": 5.0,
+        "concentrationMgPerMl": 15,
+        "routeOfAdministration": "SC / PO",
+        "triageWarnings": ["مایع تزریقی به شدت اسیدی و دردناک است. محل تزریق زیرپوستی باید هر روز تغییر کند تا از نکروز بافتی جلوگیری شود."],
+        "notes": "داروی ضدویروس و خط اول درمان FIP. دوره درمان معمولاً ۸۴ روز متوالی است. (دوز در فرم‌های عصبی یا چشمی تا 15 mg/kg افزایش می‌یابد)."
+    },
+    {
+        "species": "Cat",
+        "condition": "Toxoplasmosis / Osteomyelitis",
+        "drugName": "Clindamycin",
+        "baseDosageMgPerKg": 12.5,
+        "concentrationMgPerMl": 25,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["خطر بالای ازوفاژیت (التهاب و زخم مری) در گربه‌ها. پس از خوراندن قرص یا کپسول، حتماً ۶ میلی‌لیتر آب یا کمی غذا به گربه داده شود."],
+        "notes": "آنتی‌بیوتیک بسیار موثر بر باکتری‌های بی‌هوازی و تک‌یاخته توکسوپلاسما."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Alpha-2 Agonist Reversal (Xylazine Reversal)",
+        "drugName": "Tolazoline",
+        "baseDosageMgPerKg": 2.0,
+        "concentrationMgPerMl": 100,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["تزریق وریدی سریع می‌تواند باعث کلاپس قلبی-عروقی و مرگ ناگهانی شود. دارو باید به آرامی تجویز گردد."],
+        "notes": "آنتاگونیست گیرنده آلفا-۲. پادزهر اختصاصی برای بیدار کردن اسب‌ها و نشخوارکنندگان پس از بیهوشی با زایلازین."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Retained Placenta / Uterine Inertia",
+        "drugName": "Oxytocin",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 10,
+        "routeOfAdministration": "IM / IV",
+        "triageWarnings": ["در صورت بسته بودن دهانه رحم (سرویکس) یا در سخت‌زایی‌های انسدادی (بدفرمی جنین)، تزریق این دارو باعث پارگی رحم و مرگ دام می‌شود."],
+        "notes": "دوز استاندارد گاو بالغ بین ۲۰ تا ۴۰ واحد بین‌المللی (IU) است. محرک قدرتمند انقباضات رحمی و خروج شیر."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Bovine Coccidiosis",
+        "drugName": "Amprolium",
+        "baseDosageMgPerKg": 10.0,
+        "concentrationMgPerMl": 96,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["مصرف طولانی‌مدت یا اوردوز دارو باعث کمبود ویتامین B1 (تیامین) و بروز علائم شدید عصبی (فلجی و کوری) در گوساله‌ها می‌شود."],
+        "notes": "داروی خط اول درمان و پیشگیری از کوکسیدیوز در نشخوارکنندگان. معمولاً در آب آشامیدنی گله استفاده می‌شود."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Tapeworm Infection (Cestodes)",
+        "drugName": "Praziquantel",
+        "baseDosageMgPerKg": 10.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["این دارو روی نماتودها (کرم‌های گرد) اثری ندارد و فقط برای کرم‌های نواری کاربرد دارد."],
+        "notes": "بهترین و موثرترین ضدانگل برای درمان آلودگی با سستودها در طیور بومی و زینتی."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Heat Stress / Viral Infection Support",
+        "drugName": "Ascorbic Acid (Vitamin C)",
+        "baseDosageMgPerKg": 50.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO (In Water)",
+        "triageWarnings": ["ویتامین C در آب آشامیدنی به سرعت اکسید می‌شود. محلول باید روزانه تازه تهیه شود و ترجیحاً در ساعات خنک روز مصرف گردد."],
+        "notes": "حمایت‌کننده عالی برای کاهش تلفات ناشی از استرس گرمایی و کمک به سیستم ایمنی در درگیری‌های ویروسی مثل آنفولانزا و نیوکاسل."
+    },
+    {
+        "species": "Bee",
+        "condition": "Small Hive Beetle (SHB)",
+        "drugName": "Coumaphos",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "Topical (Strip)",
+        "triageWarnings": ["یک سم ارگانوفسفره است که به راحتی در موم کندو تجمع می‌یابد. نباید در زمان جریان عسل استفاده شود.", "برای اپراتور سمی است؛ استفاده از دستکش الزامی است."],
+        "notes": "نام تجاری رایج CheckMite+ است. برای کنترل سوسک کوچک کندو و کنه‌های واروای مقاوم استفاده می‌شود."
+    },
+    {
+        "species": "Dog",
+        "condition": "Urinary Incontinence",
+        "drugName": "Phenylpropanolamine (PPA)",
+        "baseDosageMgPerKg": 1.5,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["در سگ‌های مبتلا به فشار خون بالا (Hypertension) یا گلوکوم منع مصرف دارد.", "ممکن است باعث بی‌قراری و پرخاشگری شود."],
+        "notes": "داروی خط اول برای کنترل بی‌اختیاری ادراری ناشی از ضعف اسفنکتر مجرای ادرار (مخصوصاً در سگ‌های ماده عقیم‌شده)."
+    },
+    {
+        "species": "Dog",
+        "condition": "Heartworm Disease (Adulticide)",
+        "drugName": "Melarsomine",
+        "baseDosageMgPerKg": 2.5,
+        "concentrationMgPerMl": 25,
+        "routeOfAdministration": "IM",
+        "triageWarnings": ["تزریق فقط و فقط باید به صورت عضلانی عمیق در عضلات لومبار (فیله کمر) انجام شود.", "استراحت مطلق (Cage Rest) در طول درمان برای جلوگیری از ترومبوآمبولی ریوی الزامی است."],
+        "notes": "تنها داروی تایید شده برای کشتن کرم‌های بالغ قلب. پروتکل درمانی معمولاً شامل یک تزریق، و سپس دو تزریق دیگر با فاصله یک ماه است."
+    },
+    {
+        "species": "Dog",
+        "condition": "Osteoarthritis / Chronic Pain",
+        "drugName": "Grapiprant",
+        "baseDosageMgPerKg": 2.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["با سایر داروهای NSAID یا کورتیکواستروئیدها به طور همزمان مصرف نشود."],
+        "notes": "آنتاگونیست گیرنده پروستاگلاندین (برند Galliprant). یک ضددرد بسیار نوین و ایمن‌تر برای کلیه و کبد در دردهای مفصلی مزمن."
+    },
+    {
+        "species": "Cat",
+        "condition": "Systemic Hypertension",
+        "drugName": "Amlodipine",
+        "baseDosageMgPerKg": 0.125,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["مانیتورینگ منظم فشار خون الزامی است تا از افت شدید فشار (Hypotension) جلوگیری شود."],
+        "notes": "مسدودکننده کانال کلسیم. داروی طلایی و خط اول برای کنترل فشار خون بالا در گربه‌ها (که معمولاً ثانویه به بیماری کلیوی یا پرکاری تیروئید است)."
+    },
+    {
+        "species": "Cat",
+        "condition": "Emesis Induction (Toxin Ingestion)",
+        "drugName": "Dexmedetomidine",
+        "baseDosageMgPerKg": 0.007,
+        "concentrationMgPerMl": 0.5,
+        "routeOfAdministration": "IM / IV",
+        "triageWarnings": ["باعث افت ضربان قلب و آرام‌بخشی عمیق می‌شود. پس از استفراغ کامل، می‌توان از آتیپامزول برای خنثی کردن اثر آن استفاده کرد."],
+        "notes": "برخلاف سگ‌ها که آپومورفین برایشان عالی است، گربه‌ها برای القای استفراغ اورژانسی به آلفا-۲ آگونیست‌ها (مثل دکسمدتومیدین یا زایلازین) بسیار بهتر پاسخ می‌دهند."
+    },
+    {
+        "species": "Cat",
+        "condition": "Anaphylaxis / Status Asthmaticus",
+        "drugName": "Dexamethasone Sodium Phosphate (DSP)",
+        "baseDosageMgPerKg": 0.5,
+        "concentrationMgPerMl": 4,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["تزریق وریدی سریع می‌تواند باعث افت فشار شود.", "استفاده طولانی‌مدت یا دوزهای بالا می‌تواند سیستم ایمنی را به شدت سرکوب کند."],
+        "notes": "کورتیکواستروئید سریع‌الاثر. برای شوک‌های آلرژیک شدید و بحران‌های تنفسی که نیاز به اثر فوری در جریان خون دارند."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Equine Gastric Ulcer Syndrome (EGUS)",
+        "drugName": "Omeprazole (Equine Paste)",
+        "baseDosageMgPerKg": 4.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["برای اثربخشی کامل، باید حداقل ۲۸ روز متوالی مصرف شود.", "برای پیشگیری (در زمان استرس یا مسابقه) دوز دارو به 1 mg/kg کاهش می‌یابد."],
+        "notes": "تنها داروی تایید شده و بسیار موثر برای درمان زخم معده در اسب‌ها (به شکل خمیر خوراکی)."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Rumen Atony / Indigestion",
+        "drugName": "Neostigmine",
+        "baseDosageMgPerKg": 0.02,
+        "concentrationMgPerMl": 2,
+        "routeOfAdministration": "SC",
+        "triageWarnings": ["در موارد انسداد مکانیکی دستگاه گوارش (مثل گیر کردن جسم خارجی یا پیچ‌خوردگی روده) به شدت منع مصرف دارد و باعث پارگی احشا می‌شود."],
+        "notes": "داروی پاراسمپاتومیمتیک. محرک قوی حرکات شکمبه در گاو و حرکات دودی روده در اسب."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Muscle Relaxation (Anesthesia Adjunct)",
+        "drugName": "Guaifenesin 5%",
+        "baseDosageMgPerKg": 50.0,
+        "concentrationMgPerMl": 50,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["غلظت‌های بالاتر از ۵٪ در اسب‌ها و گاوها باعث همولیز (تخریب گلبول‌های قرمز) و فلبیت شدید می‌شود.", "تزریق باید حتماً از طریق کاتتر وریدی انجام شود."],
+        "notes": "شل‌کننده عضلانی مرکزی. به تنهایی بیهوش‌کننده یا ضددرد نیست و حتماً باید همراه با کتامین و زایلازین (ترکیب Triple Drip) استفاده شود."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Colibacillosis / E. coli Infection",
+        "drugName": "Fosfomycin",
+        "baseDosageMgPerKg": 40.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO (In Water)",
+        "triageWarnings": ["در آب آشامیدنی مخلوط می‌شود و معمولاً دوره درمان ۳ تا ۵ روز است."],
+        "notes": "آنتی‌بیوتیک باکتری‌سیدال قدرتمند با کمترین میزان مقاومت دارویی در طیور. بسیار موثر بر روی عفونت‌های ناشی از اشریشیا کلی."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Encephalomalacia (Crazy Chick Disease)",
+        "drugName": "Vitamin E + Selenium",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO (In Water)",
+        "triageWarnings": ["اوردوز سلنیوم به شدت سمی و کشنده است. دوز مصرفی بر اساس دستورالعمل کارخانه تولیدکننده دقیقاً محاسبه شود."],
+        "notes": "برای درمان و پیشگیری از کمبود ویتامین E که باعث علائم عصبی شدید، دیستروفی عضلانی و کاهش هچ می‌شود."
+    },
+    {
+        "species": "Bee",
+        "condition": "Nosemosis (Supportive Treatment)",
+        "drugName": "Thymol Syrup",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO (In Feed)",
+        "triageWarnings": ["در زمان جریان شهد و ذخیره عسل استفاده نشود.", "تیمول با غلظت بالا می‌تواند برای زنبورها دافع باشد و از خوردن شربت امتناع کنند."],
+        "notes": "علاوه بر کنترل کنه واروا، خوراندن شربت حاوی غلظت پایین تیمول به کنترل بار اسپورهای نوزما در دستگاه گوارش زنبور کمک می‌کند."
+    },
+    {
+        "species": "Dog",
+        "condition": "Atrial Fibrillation",
+        "drugName": "Digoxin",
+        "baseDosageMgPerKg": 0.005,
+        "concentrationMgPerMl": 0.15,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["دارای پنجره درمانی باریک است؛ مسمومیت با دیگوکسین بسیار شایع و خطرناک است.", "در بیماران با نارسایی کلیوی یا هایپوکالمی (کمبود پتاسیم)، دوز دارو باید کاهش یابد."],
+        "notes": "گلیکوزید قلبی. برای کنترل ضربان قلب در فیبریلاسیون دهلیزی استفاده می‌شود. مانیتورینگ سطح سرمی دارو در صورت امکان توصیه می‌شود."
+    },
+    {
+        "species": "Dog",
+        "condition": "Acute Pain (Injectable)",
+        "drugName": "Hydromorphone",
+        "baseDosageMgPerKg": 0.1,
+        "concentrationMgPerMl": 2,
+        "routeOfAdministration": "IM / IV",
+        "triageWarnings": ["ممکن است باعث استفراغ (Vomiting) بعد از تزریق شود.", "در صورت مصرف بیش از حد، می‌تواند باعث دپرسیون شدید تنفسی شود."],
+        "notes": "مخدر نیمه‌سنتتیک قوی. داروی انتخابی برای تسکین دردهای شدید قبل و بعد از جراحی در سگ‌ها."
+    },
+    {
+        "species": "Cat",
+        "condition": "Post-Surgical Analgesia",
+        "drugName": "Fentanyl (Transdermal Patch)",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "Topical (Patch)",
+        "triageWarnings": ["پچ باید روی پوست بدون مو (تراشیده شده) چسبانده شود.", "خطر بلعیده شدن پچ توسط حیوان یا انسان بسیار خطرناک و کشنده است."],
+        "notes": "دوز بر اساس وزن حیوان (میکروگرم بر ساعت بر اساس اندازه پچ) تعیین می‌شود. فراهم‌کننده تسکین درد پایدار برای ۳ تا ۵ روز."
+    },
+    {
+        "species": "Cat",
+        "condition": "Feline Behavioral Issues",
+        "drugName": "Fluoxetine",
+        "baseDosageMgPerKg": 1.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["اثرات درمانی دارو ممکن است ۴ تا ۶ هفته طول بکشد تا ظاهر شود.", "ممکن است در ابتدا باعث بی‌اشتهایی خفیف شود."],
+        "notes": "مهارکننده انتخابی بازجذب سروتونین (SSRI). برای درمان رفتارهای نامطلوب مثل ادرار کردن خارج از ظرف خاک یا پرخاشگری استفاده می‌شود."
+    },
+    {
+        "species": "Cat",
+        "condition": "Ocular Ulceration (Secondary Infection)",
+        "drugName": "Ofloxacin 0.3%",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "Topical (Ophthalmic)",
+        "triageWarnings": ["در صورت مشاهده واکنش‌های آلرژیک چشمی، مصرف دارو باید قطع شود."],
+        "notes": "آنتی‌بیوتیک فلوروکینولونی چشمی. برای درمان عفونت‌های باکتریایی سطحی چشم و پیشگیری از عفونت‌های ثانویه در زخم‌های قرنیه."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Acute Bloat (Tympanic)",
+        "drugName": "Poloxalene / Simethicone",
+        "baseDosageMgPerKg": 2.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["در موارد نفخ کفی (Frothy Bloat) استفاده می‌شود. در نفخ گازی (Free-gas) کارایی کمتری دارد."],
+        "notes": "ماده ضدکف (Antifoaming agent). با شکستن حباب‌های گاز در شکمبه به خروج سریع‌تر آن‌ها کمک می‌کند."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Equine Sepsis / Severe Infection",
+        "drugName": "Gentamicin",
+        "baseDosageMgPerKg": 6.6,
+        "concentrationMgPerMl": 100,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["به شدت نفروتوکسیک (سمی برای کلیه) است؛ هیدراتاسیون کافی حیوان در طول درمان حیاتی است."],
+        "notes": "آمینوگلیکوزید موثر بر باکتری‌های گرم منفی. دوز گفته شده معمولاً یک‌بار در روز تجویز می‌شود."
+    },
+    {
+        "species": "Poultry",
+        "condition": "Pullorum Disease / Salmonella",
+        "drugName": "Sulfamethoxazole + Trimethoprim",
+        "baseDosageMgPerKg": 25.0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO (In Water)",
+        "triageWarnings": ["استفاده طولانی‌مدت ممکن است باعث اختلال در جذب ویتامین‌های گروه B شود."],
+        "notes": "ترکیب سولفونامیدی برای درمان عفونت‌های سالمونلایی و کلی‌باسیلوز در طیور."
+    },
+    {
+        "species": "Bee",
+        "condition": "General Hive Health / Immunity",
+        "drugName": "Vitamin B Complex",
+        "baseDosageMgPerKg": 0,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO (In Feed)",
+        "triageWarnings": ["دوز بیش از حد ممکن است باعث تخمیر نامطلوب شربت در کندو شود."],
+        "notes": "مخلوط در شربت برای تقویت کلونی پس از زمستان‌گذرانی یا استرس‌های محیطی."
     }
 ]
-    
