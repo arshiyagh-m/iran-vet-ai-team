@@ -2,7 +2,6 @@ const TreatmentProtocol = require('../models/TreatmentProtocol');
 
 // @desc    محاسبه دوز و حجم داروی مورد نیاز بر اساس گونه، بیماری و وزن
 // @route   POST /api/v1/calculator/calculate
-// @access  Public (یا Private بر اساس ساختار احراز هویت سایت شما)
 exports.calculateDosage = async (req, res) => {
     try {
         const { species, condition, weight } = req.body;
@@ -34,10 +33,10 @@ exports.calculateDosage = async (req, res) => {
 
         // ۳. محاسبه دوز و حجم مورد نیاز برای هر دارو
         const calculationResults = protocols.map(protocol => {
-            // محاسبه دوز کل به میلی‌گرم (وزن حیوان * دوز پایه دارو)
+            // محاسبه دوز کل به میلی‌گرم
             const totalDosageMg = Number((protocol.baseDosageMgPerKg * weight).toFixed(2));
             
-            // محاسبه حجم دارو به میلی‌لیتر (اگر غلظت مشخص شده باشد و دارو مایع/تزریقی باشد)
+            // محاسبه حجم دارو به میلی‌لیتر
             let totalVolumeMl = null;
             if (protocol.concentrationMgPerMl && protocol.concentrationMgPerMl > 0) {
                 totalVolumeMl = Number((totalDosageMg / protocol.concentrationMgPerMl).toFixed(2));
@@ -47,7 +46,7 @@ exports.calculateDosage = async (req, res) => {
                 drugName: protocol.drugName,
                 baseDosageMgPerKg: protocol.baseDosageMgPerKg,
                 totalDosageMg,
-                totalVolumeMl, // اگر نال باشد یعنی دارو به صورت قرص یا پودر است و نیاز به حجم مایع ندارد
+                totalVolumeMl,
                 routeOfAdministration: protocol.routeOfAdministration,
                 triageWarnings: protocol.triageWarnings,
                 notes: protocol.notes
@@ -70,6 +69,61 @@ exports.calculateDosage = async (req, res) => {
             error: error.message
         });
     }
-    exports.seedTreatments
 };
 
+// ==========================================
+// بخش مربوط به تزریق داده‌های اولیه (Seed)
+// ==========================================
+
+const sampleProtocols = [
+    {
+        species: 'Cat',
+        condition: 'Urinary Spasm',
+        drugName: 'Diazepam',
+        baseDosageMgPerKg: 0.5,
+        concentrationMgPerMl: 5,
+        routeOfAdministration: 'IV',
+        triageWarnings: ['در گربه‌های با نارسایی کبد با احتیاط شدید مصرف شود.', 'تزریق وریدی بسیار آهسته باشد.'],
+        notes: 'برای شل کردن اسفنکتر مجرای ادرار در موارد احتباس ادراری.'
+    },
+    {
+        species: 'Dog',
+        condition: 'Anaphylactic Shock',
+        drugName: 'Epinephrine',
+        baseDosageMgPerKg: 0.01,
+        concentrationMgPerMl: 1,
+        routeOfAdministration: 'IM',
+        triageWarnings: ['مسیر عضلانی (IM) ترجیح داده می‌شود.', 'خطر آریتمی شدید در صورت تزریق اشتباه وریدی.'],
+        notes: 'دوز دارویی اورژانسی برای مقابله با واکنش‌های حاد آلرژیک.'
+    },
+    {
+        species: 'Poultry',
+        condition: 'Bacterial Infection',
+        drugName: 'Enrofloxacin',
+        baseDosageMgPerKg: 10,
+        concentrationMgPerMl: 100,
+        routeOfAdministration: 'PO',
+        triageWarnings: ['مدت زمان پرهیز از مصرف گوشت رعایت شود.'],
+        notes: 'برای درمان عفونت‌های تنفسی و گوارشی باکتریایی در طیور.'
+    }
+];
+
+// @desc    تزریق داده‌های اولیه به دیتابیس (فقط با باز کردن لینک)
+// @route   GET /api/v1/calculator/seed
+exports.seedTreatments = async (req, res) => {
+    try {
+        await TreatmentProtocol.deleteMany(); // پاک کردن دیتای قبلی
+        await TreatmentProtocol.insertMany(sampleProtocols); // وارد کردن دیتای جدید
+        
+        return res.status(200).json({
+            success: true,
+            message: 'داده‌های اولیه دارویی و تریاژ با موفقیت به دیتابیس تزریق شدند! 🎉'
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: 'خطا در تزریق داده‌ها',
+            error: error.message
+        });
+    }
+};
