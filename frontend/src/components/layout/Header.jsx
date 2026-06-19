@@ -6,8 +6,6 @@ import logo from '../../assets/logo.png';
 
 // این بخش را کنار بقیه لینک‌های منو (مثل صفحه اصلی، درباره ما و غیره) قرار بده:
 
-
-
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -42,16 +40,14 @@ const Header = () => {
             <Link to="/faq" className={`text-sm font-medium transition ${location.pathname === '/faq' ? 'text-blue-600 font-bold' : 'text-gray-600 hover:text-blue-600'}`}>
               سوالات متداول
             </Link>
-            <Link>
+            
+            {/* 👇 تگ لینک اینجا اصلاح شد */}
+            <Link 
               to="/triage-calculator" 
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
               <span>🧮</span>
               <span>ماشین‌حساب تریاژ</span>
             </Link>
-
-
-            
-            
           </div>
 
           {/* دکمه‌های سمت چپ */}
@@ -95,6 +91,12 @@ const Header = () => {
             <Link to="/" onClick={() => setIsOpen(false)} className="block py-2 text-gray-600 hover:text-blue-600 font-medium">خانه</Link>
             <Link to="/bots" onClick={() => setIsOpen(false)} className="block py-2 text-gray-600 hover:text-blue-600 font-medium">ربات‌ها</Link>
             <Link to="/faq" onClick={() => setIsOpen(false)} className="block py-2 text-gray-600 hover:text-blue-600 font-medium">سوالات متداول</Link>
+            
+            {/* 👇 این بخش برای منوی موبایل اضافه شد */}
+            <Link to="/triage-calculator" onClick={() => setIsOpen(false)} className="flex items-center gap-2 py-2 text-blue-600 font-bold">
+              <span>🧮</span> ماشین‌حساب تریاژ
+            </Link>
+
             <div className="pt-4 flex flex-col gap-3">
                <Link to="/bots" onClick={() => setIsOpen(false)} className="w-full text-center py-3 bg-blue-50 text-blue-700 rounded-xl font-bold">
                  مشاهده ربات‌ها
