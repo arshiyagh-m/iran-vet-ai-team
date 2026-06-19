@@ -1,0 +1,103 @@
+[
+    {
+        "species": "Cat",
+        "condition": "Seizures / Status Epilepticus",
+        "drugName": "Diazepam",
+        "baseDosageMgPerKg": 0.5,
+        "concentrationMgPerMl": 5,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["در نارسایی شدید کبدی منع مصرف دارد.", "تزریق وریدی باید بسیار آهسته انجام شود."],
+        "notes": "خط اول کنترل تشنج اورژانسی. در صورت عدم دسترسی به رگ، می‌توان به صورت داخل رکتوم (Rectal) با دوز بالاتر استفاده کرد."
+    },
+    {
+        "species": "Dog",
+        "condition": "Anaphylactic Shock / CPR",
+        "drugName": "Epinephrine",
+        "baseDosageMgPerKg": 0.01,
+        "concentrationMgPerMl": 1,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["خطر آریتمی کشنده در صورت دوز اوردوز.", "در احیای قلبی-ریوی (CPR) هر ۳ تا ۵ دقیقه قابل تکرار است."],
+        "notes": "نجات‌بخش در شوک آنافیلاکتیک و ایست قلبی."
+    },
+    {
+        "species": "Dog",
+        "condition": "Severe Pain / Trauma",
+        "drugName": "Buprenorphine",
+        "baseDosageMgPerKg": 0.02,
+        "concentrationMgPerMl": 0.3,
+        "routeOfAdministration": "IM",
+        "triageWarnings": ["در حیوانات با ضربه مغزی (Head Trauma) به دلیل احتمال سرکوب تنفسی با احتیاط مصرف شود."],
+        "notes": "آنالژزیک بسیار ایمن و موثر برای دردهای متوسط تا شدید."
+    },
+    {
+        "species": "Cat",
+        "condition": "Congestive Heart Failure (Pulmonary Edema)",
+        "drugName": "Furosemide",
+        "baseDosageMgPerKg": 2.0,
+        "concentrationMgPerMl": 10,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["وضعیت هیدراتاسیون و الکترولیت‌ها (به ویژه پتاسیم) باید مانیتور شود."],
+        "notes": "دیورتیک خط اول برای ادم ریوی ناشی از نارسایی قلبی."
+    },
+    {
+        "species": "Dog",
+        "condition": "Bradycardia / Pre-anesthesia",
+        "drugName": "Atropine",
+        "baseDosageMgPerKg": 0.02,
+        "concentrationMgPerMl": 0.5,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["در حیوانات با تاکی‌کاردی یا گلوکوم منع مصرف دارد."],
+        "notes": "برای درمان برادی‌کاردی شدید یا به عنوان پیش‌بیهوشی برای کاهش ترشحات."
+    },
+    {
+        "species": "Cat",
+        "condition": "Bacterial Infection (Susceptible)",
+        "drugName": "Amoxicillin / Clavulanate",
+        "baseDosageMgPerKg": 12.5,
+        "concentrationMgPerMl": 0,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["بهتر است همراه با غذا داده شود تا عوارض گوارشی به حداقل برسد."],
+        "notes": "آنتی‌بیوتیک وسیع‌الطیف برای عفونت‌های پوست، بافت نرم و مجاری ادراری. (غلظت صفر است چون معمولاً قرص است)."
+    },
+    {
+        "species": "Poultry",
+        "condition": "CRD (Chronic Respiratory Disease)",
+        "drugName": "Tylosin",
+        "baseDosageMgPerKg": 50,
+        "concentrationMgPerMl": 200,
+        "routeOfAdministration": "PO",
+        "triageWarnings": ["مخلوط در آب آشامیدنی. آب حاوی دارو باید روزانه تعویض شود."],
+        "notes": "بسیار موثر بر روی مایکوپلاسما در طیور."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Colic / Endotoxemia",
+        "drugName": "Flunixin Meglumine",
+        "baseDosageMgPerKg": 1.1,
+        "concentrationMgPerMl": 50,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["تزریق عضلانی (IM) در اسب‌ها به دلیل خطر نکروز بافتی و عفونت کلستریدیایی ممنوع است."],
+        "notes": "NSAID بسیار قدرتمند برای کنترل دردهای احشایی در اسب و گاو."
+    },
+    {
+        "species": "Large Animal",
+        "condition": "Sedation / Pre-anesthesia",
+        "drugName": "Xylazine",
+        "baseDosageMgPerKg": 0.2,
+        "concentrationMgPerMl": 20,
+        "routeOfAdministration": "IM",
+        "triageWarnings": ["گاوها به زایلازین بسیار حساس‌تر از اسب‌ها هستند (به دوز دقت شود).", "خطر افت فشار خون و برادی‌کاردی."],
+        "notes": "آرام‌بخش رایج در دامپزشکی دام بزرگ."
+    },
+    {
+        "species": "Dog",
+        "condition": "Ventricular Tachycardia",
+        "drugName": "Lidocaine (Without Epinephrine)",
+        "baseDosageMgPerKg": 2.0,
+        "concentrationMgPerMl": 20,
+        "routeOfAdministration": "IV",
+        "triageWarnings": ["گربه‌ها به لیدوکائین بسیار حساس هستند و دوز سگ نباید برای آن‌ها استفاده شود.", "هرگز از لیدوکائین حاوی اپی‌نفرین به صورت IV استفاده نشود."],
+        "notes": "درمان اورژانسی برای آریتمی‌های بطنی."
+    }
+]
+
