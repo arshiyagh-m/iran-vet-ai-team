@@ -11,9 +11,8 @@ const ClinicalTriage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // نکته: اینجا آدرس دقیق API بک‌اندت رو که پیدا کردی جایگزین کن
-  // اگر از متغیر محیطی استفاده می‌کنی اینطوری بنویس: import.meta.env.VITE_BASE_URL + '/api/v1/calculator/calculate'
-  const API_URL = 'http://localhost:5000/api/v1/calculator/calculate'; 
+  // 👇 آدرس دقیق بک‌اند روی سرور Render جایگزین شد
+  const API_URL = 'https://vet-ai-api.onrender.com/api/v1/calculator/calculate'; 
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -33,7 +32,8 @@ const ClinicalTriage = () => {
       });
       setResults(response.data.results);
     } catch (err) {
-      setError(err.response?.data?.message || 'خطایی در ارتباط با سرور رخ داد.');
+      // مدیریت خطاهای سرور به شکل تمیز
+      setError(err.response?.data?.message || 'خطایی در ارتباط با سرور رخ داد. لطفا اتصال اینترنت یا وضعیت سرور را بررسی کنید.');
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,7 @@ const ClinicalTriage = () => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200"
+              className={`w-full mt-6 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ${loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
             >
               {loading ? 'در حال محاسبه...' : 'محاسبه دقیق دوز'}
             </button>
@@ -117,10 +117,10 @@ const ClinicalTriage = () => {
 
           {/* نمایش نتایج */}
           {results && results.length > 0 && (
-            <div className="mt-8 space-y-4">
+            <div className="mt-8 space-y-4 animate-fadeIn">
               <h3 className="text-xl font-bold text-gray-800 border-b pb-2">نتایج محاسبات دارویی:</h3>
               {results.map((result, index) => (
-                <div key={index} className="bg-green-50 border border-green-200 rounded-lg p-5">
+                <div key={index} className="bg-green-50 border border-green-200 rounded-lg p-5 shadow-sm">
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="text-lg font-bold text-green-800">{result.drugName}</h4>
                     <span className="bg-green-200 text-green-800 text-xs px-2 py-1 rounded-full font-bold">
@@ -129,12 +129,12 @@ const ClinicalTriage = () => {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-                    <div className="bg-white p-3 rounded shadow-sm">
+                    <div className="bg-white p-3 rounded shadow-sm border-r-4 border-green-500">
                       <span className="block text-gray-500">دوز کل (میلی‌گرم):</span>
                       <span className="font-bold text-lg text-gray-800">{result.totalDosageMg} mg</span>
                     </div>
                     {result.totalVolumeMl && (
-                      <div className="bg-white p-3 rounded shadow-sm border-l-4 border-blue-500">
+                      <div className="bg-white p-3 rounded shadow-sm border-r-4 border-blue-500">
                         <span className="block text-gray-500">حجم تزریق (میلی‌لیتر):</span>
                         <span className="font-bold text-lg text-blue-600">{result.totalVolumeMl} ml</span>
                       </div>
@@ -145,7 +145,7 @@ const ClinicalTriage = () => {
                   {result.triageWarnings && result.triageWarnings.length > 0 && (
                     <div className="mt-3 bg-yellow-100 border border-yellow-300 p-3 rounded text-sm text-yellow-800">
                       <p className="font-bold mb-1">⚠️ هشدارهای تریاژ:</p>
-                      <ul className="list-disc list-inside">
+                      <ul className="list-disc list-inside space-y-1">
                         {result.triageWarnings.map((warning, i) => (
                           <li key={i}>{warning}</li>
                         ))}
@@ -154,7 +154,9 @@ const ClinicalTriage = () => {
                   )}
                   
                   {result.notes && (
-                    <p className="mt-3 text-xs text-gray-500 bg-white p-2 rounded">📝 نکته تکمیلی: {result.notes}</p>
+                    <p className="mt-3 text-xs text-gray-600 bg-white p-2 rounded border border-gray-100">
+                      📝 <span className="font-bold">نکته تکمیلی:</span> {result.notes}
+                    </p>
                   )}
                 </div>
               ))}
@@ -167,4 +169,3 @@ const ClinicalTriage = () => {
 };
 
 export default ClinicalTriage;
-
