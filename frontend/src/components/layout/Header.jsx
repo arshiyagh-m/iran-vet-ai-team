@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { FaBars, FaTimes, FaRobot, FaUser, FaSignInAlt } from 'react-icons/fa';
 // 👇 ایمپورت لوگو
 import logo from '../../assets/logo.png';
-import { Link } from 'react-router-dom';
 
 // این بخش را کنار بقیه لینک‌های منو (مثل صفحه اصلی، درباره ما و غیره) قرار بده:
 
