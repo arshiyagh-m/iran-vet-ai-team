@@ -70,5 +70,6 @@ exports.calculateDosage = async (req, res) => {
             error: error.message
         });
     }
+    exports.seedTreatments
 };
 
