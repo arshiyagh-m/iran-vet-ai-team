@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { calculateDosage } = require('../controllers/treatmentController');
+const { calculateDosage, seedTreatments } = require('../controllers/treatmentController');
+
+// مسیر تزریق داده‌ها (فقط با باز کردن لینک در مرورگر اجرا می‌شود)
+router.get('/seed', seedTreatments);
 
 // مسیر محاسبه دوز داروها
-// آدرس کامل این ریکوئست خواهد بود: POST /api/v1/calculator/calculate
 router.post('/calculate', calculateDosage);
 
 module.exports = router;
-
